@@ -1,0 +1,366 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.3">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2023-08-21T15:19:08+08:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Wanjin Hu (胡万金)</title><subtitle>There is only one heroism in the world: to see the world as it is and to love it. (世界上只有一种真正的英雄主义，那就是认清生活真相后依旧热爱生活。)</subtitle><author><name>Wanjin Hu</name></author><entry><title type="html">宏基因组分析流程</title><link href="http://localhost:4000/2023/08/10/pipeline-metagenomic-analysis/" rel="alternate" type="text/html" title="宏基因组分析流程" /><published>2023-08-10T00:00:00+08:00</published><updated>2023-08-10T00:00:00+08:00</updated><id>http://localhost:4000/2023/08/10/pipeline-metagenomic-analysis</id><content type="html" xml:base="http://localhost:4000/2023/08/10/pipeline-metagenomic-analysis/">&lt;p&gt;提供一个宏基因组分析流程。&lt;/p&gt;
+
+&lt;p&gt;Here is a metagenomic sequence data analysis pipeline, nothing different with other pipelines. But if you want to get to know the metagenomic analysis pipeline step by step, maybe you can get some details from this repository. And it is suitable for the beginners i think.&lt;/p&gt;
+
+&lt;p&gt;Scripts and test files you can find here: &lt;a href=&quot;https://github.com/wanjinhu/Metagenomic-Analysis-Pipeline&quot;&gt;Metagenomic-Analysis-Pipeline&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;pipeline-overview-&quot;&gt;Pipeline overview 🐫&lt;/h2&gt;
+&lt;ul&gt;
+  &lt;li&gt;Raw sequence quality trim&lt;/li&gt;
+  &lt;li&gt;Host reference sequence remove&lt;/li&gt;
+  &lt;li&gt;Metaphlan for composition of microbial communities&lt;/li&gt;
+  &lt;li&gt;Sequence assembly&lt;/li&gt;
+  &lt;li&gt;Gene prediction&lt;/li&gt;
+  &lt;li&gt;Remove redundancy gene and build non-redundant geneset&lt;/li&gt;
+  &lt;li&gt;Function annotation using emapper&lt;/li&gt;
+  &lt;li&gt;Organize function results table&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;quick-start-&quot;&gt;Quick start 🦏&lt;/h2&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nv&quot;&gt;$python&lt;/span&gt; pipe_metagenome.py &lt;span class=&quot;nt&quot;&gt;-h&lt;/span&gt;
+usage: 
+&lt;span class=&quot;o&quot;&gt;=================================================================&lt;/span&gt;
+python pipe_metagenome.py
+	&lt;span class=&quot;nt&quot;&gt;--fastq_list&lt;/span&gt; fq.list
+	&lt;span class=&quot;nt&quot;&gt;--output_dir&lt;/span&gt; result
+	&lt;span class=&quot;nt&quot;&gt;--ref&lt;/span&gt; ref_bowtie2_index
+ref_bowtie2_index:
+canis: /root/database/Canis_GCF_000002285.5/Canis_GCF_000002285_5
+human: /root/database/hg38_GCF_000001405.40/GCF_000001405.40/hg38
+&lt;span class=&quot;o&quot;&gt;=================================================================&lt;/span&gt;
+
+Pipeline of metagenome
+
+optional arguments:
+  &lt;span class=&quot;nt&quot;&gt;-h&lt;/span&gt;, &lt;span class=&quot;nt&quot;&gt;--help&lt;/span&gt;            show this &lt;span class=&quot;nb&quot;&gt;help &lt;/span&gt;message and &lt;span class=&quot;nb&quot;&gt;exit&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;-l&lt;/span&gt; FQLIST, &lt;span class=&quot;nt&quot;&gt;--fastq_list&lt;/span&gt; FQLIST
+                        raw fq list
+  &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; OUTDIR, &lt;span class=&quot;nt&quot;&gt;--output_dir&lt;/span&gt; OUTDIR
+                        result output
+  &lt;span class=&quot;nt&quot;&gt;-r&lt;/span&gt; REF, &lt;span class=&quot;nt&quot;&gt;--ref&lt;/span&gt; REF     ref genome bowtie2 index
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;What you need to do is to provide two input files:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;–fastq_list # sample - fq_R1 - fq_R2 list, format like &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;fq.list&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;–ref # host reference genome bowtie2 index&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;And set output dir &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;--output_dir&lt;/code&gt;, all of output results would be included.&lt;/p&gt;
+
+&lt;h2 id=&quot;output-files-explanation-&quot;&gt;Output files explanation 🐊&lt;/h2&gt;
+&lt;h3 id=&quot;output-files-tree-not-show-all-files&quot;&gt;Output files tree (not show all files)&lt;/h3&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;├── 00-result                           &lt;span class=&quot;c&quot;&gt;# most important results in this fold&lt;/span&gt;
+│   ├── 00_merged_abundance_table.txt   &lt;span class=&quot;c&quot;&gt;# composition of microbial communities&lt;/span&gt;
+│   ├── 01_metaphlan_phylum.txt         &lt;span class=&quot;c&quot;&gt;# communities in phylum level&lt;/span&gt;
+│   ├── 02_metaphlan_class.txt          &lt;span class=&quot;c&quot;&gt;# communities in class level&lt;/span&gt;
+│   ├── 03_metaphlan_order.txt          &lt;span class=&quot;c&quot;&gt;# communities in order level&lt;/span&gt;
+│   ├── 04_metaphlan_family.txt         &lt;span class=&quot;c&quot;&gt;# communities in family level&lt;/span&gt;
+│   ├── 05_metaphlan_genus.txt          &lt;span class=&quot;c&quot;&gt;# communities in genus level&lt;/span&gt;
+│   ├── 06_metaphlan_species.txt        &lt;span class=&quot;c&quot;&gt;# communities in species level&lt;/span&gt;
+│   ├── KO_samples.xls                  &lt;span class=&quot;c&quot;&gt;# KEGG KO gene composition table&lt;/span&gt;
+│   └── pathway_samples.xls             &lt;span class=&quot;c&quot;&gt;# KEGG pathway composition table&lt;/span&gt;
+├── 01-fastp_trim
+├── 02-ref_remove
+├── 03-metaphlan
+├── 04-megahit
+├── 05-prodigal
+├── 06-cdhit
+├── 07-emapper
+├── 08-sam_count
+├── 09-emapper_kegg
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;h3 id=&quot;output-important-result-files-explanation&quot;&gt;Output important result files explanation&lt;/h3&gt;
+&lt;h4 id=&quot;metaphlan_diff-levelstxt&quot;&gt;metaphlan_diff-levels.txt&lt;/h4&gt;
+&lt;ul&gt;
+  &lt;li&gt;column 1 : communities information&lt;/li&gt;
+  &lt;li&gt;column 2 ~ : communities abundance percent of samples
+    &lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;clade_name	C1
+k__Bacteria&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;p__Firmicutes	86.51132
+k__Bacteria&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;p__Actinobacteria	6.52203
+k__Bacteria&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;p__Bacteroidetes	4.24729
+k__Bacteria&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;p__Proteobacteria	1.96422
+k__Bacteria&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;p__Fusobacteria	0.75514
+k__Bacteria&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;p__Tenericutes	0.0
+k__Bacteria&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;p__Spirochaetes	0.0
+k__Bacteria&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;p__Verrucomicrobia	0.0
+...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+    &lt;h4 id=&quot;ko_samplesxls&quot;&gt;KO_samples.xls&lt;/h4&gt;
+  &lt;/li&gt;
+  &lt;li&gt;column 1 : KO gene name&lt;/li&gt;
+  &lt;li&gt;column 2 : KO gene description&lt;/li&gt;
+  &lt;li&gt;column 3 : KO gene id&lt;/li&gt;
+  &lt;li&gt;column 4 ~ : KO gene number of samples
+    &lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;KO_name	KO_des	KO	C1
+&lt;span class=&quot;s2&quot;&gt;&quot;E1.1.1.1, adh&quot;&lt;/span&gt;	alcohol dehydrogenase &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;EC:1.1.1.1]	K00001	2817.0
+&lt;span class=&quot;s2&quot;&gt;&quot;AKR1A1, adh&quot;&lt;/span&gt;	alcohol dehydrogenase &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;NADP+&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;EC:1.1.1.2]	K00002	254.0
+hom	homoserine dehydrogenase &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;EC:1.1.1.3]	K00003	2890.0
+&lt;span class=&quot;s2&quot;&gt;&quot;BDH, butB&quot;&lt;/span&gt;	&lt;span class=&quot;s2&quot;&gt;&quot;(R,R)-butanediol dehydrogenase / meso-butanediol dehydrogenase / diacetyl reductase [EC:1.1.1.4 1.1.1.- 1.1.1.303]&quot;&lt;/span&gt;	K00004	20.0
+...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+    &lt;h4 id=&quot;pathway_samplesxls&quot;&gt;pathway_samples.xls&lt;/h4&gt;
+  &lt;/li&gt;
+  &lt;li&gt;column 1 : pathway level 1&lt;/li&gt;
+  &lt;li&gt;column 2 : pathway level 2&lt;/li&gt;
+  &lt;li&gt;column 3 : pathway level 3&lt;/li&gt;
+  &lt;li&gt;column 4 : pathway id&lt;/li&gt;
+  &lt;li&gt;column 5 ~ : pathway gene number of samples
+    &lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;level1	level2	level3	pathway	C1
+Metabolism	Carbohydrate metabolism	Glycolysis / Gluconeogenesis	ko00010	91005.0
+Metabolism	Carbohydrate metabolism	Citrate cycle &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;TCA cycle&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;	ko00020	31442.0
+Metabolism	Carbohydrate metabolism	Pentose phosphate pathway	ko00030	53905.0
+Metabolism	Carbohydrate metabolism	Pentose and glucuronate interconversions	ko00040	21334.0
+...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;step-by-step-&quot;&gt;Step by step 🦥&lt;/h2&gt;
+&lt;h3 id=&quot;step1-raw-sequence-quality-trim-using-fastp&quot;&gt;Step1 Raw sequence quality trim using fastp&lt;/h3&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;fastp &lt;span class=&quot;nt&quot;&gt;-i&lt;/span&gt; sample_1.fastq.gz &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+      &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; sample_clean.1.fastq.gz &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+      &lt;span class=&quot;nt&quot;&gt;-I&lt;/span&gt; sample_2.fastq.gz &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+      &lt;span class=&quot;nt&quot;&gt;-O&lt;/span&gt; sample_clean.2.fastq.gz &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+      &lt;span class=&quot;nt&quot;&gt;-w&lt;/span&gt; 8 &lt;span class=&quot;nt&quot;&gt;-h&lt;/span&gt; sample.html &lt;span class=&quot;nt&quot;&gt;-j&lt;/span&gt; sample.json
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;step2-host-reference-sequence-remove&quot;&gt;Step2 Host reference sequence remove&lt;/h3&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;bowtie2 &lt;span class=&quot;nt&quot;&gt;-x&lt;/span&gt; ref_bowtie2_index &lt;span class=&quot;nt&quot;&gt;-1&lt;/span&gt; sample_clean.1.fastq.gz &lt;span class=&quot;nt&quot;&gt;-2&lt;/span&gt; sample_clean.2.fastq.gz &lt;span class=&quot;nt&quot;&gt;-S&lt;/span&gt; sample.sam  2&amp;gt;sample.mapping.log
+samtools fastq -@ 8 &lt;span class=&quot;nt&quot;&gt;-f&lt;/span&gt; 4 sample.sam &lt;span class=&quot;nt&quot;&gt;-1&lt;/span&gt; sample.unmap.1.fastq.gz &lt;span class=&quot;nt&quot;&gt;-2&lt;/span&gt; sample.unmap.2.fastq.gz &lt;span class=&quot;nt&quot;&gt;-s&lt;/span&gt; sample.unmap.single.fastq.gz
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;step3-metaphlan-for-composition-of-microbial-communities&quot;&gt;Step3 Metaphlan for composition of microbial communities&lt;/h3&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;zcat sample.unmap.1.fastq.gz sample.unmap.2.fastq.gz|metaphlan &lt;span class=&quot;nt&quot;&gt;--input_type&lt;/span&gt; fastq &lt;span class=&quot;nt&quot;&gt;--bowtie2out&lt;/span&gt; sample_bowtie2.bz2 &lt;span class=&quot;nt&quot;&gt;--output_file&lt;/span&gt; sample_metaphlan.tsv &lt;span class=&quot;nt&quot;&gt;--nproc&lt;/span&gt; 8
+&lt;span class=&quot;c&quot;&gt;# when you install metaphlan in the system, you will get script &apos;merge_metaphlan_tables.py&apos;, that&apos;s for merge different samples metaphlan result in one file, like: &lt;/span&gt;
+merge_metaphlan_tables.py &lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.tsv &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; 00_merged_abundance_table.txt
+&lt;span class=&quot;nb&quot;&gt;grep&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-E&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;(p__)|(clade_name)&apos;&lt;/span&gt; 00_merged_abundance_table.txt |grep &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;c__&apos;&lt;/span&gt;|sed &lt;span class=&quot;s1&quot;&gt;&apos;s/|/;/g&apos;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; 01_metaphlan_phylum.txt
+&lt;span class=&quot;nb&quot;&gt;grep&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-E&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;(c__)|(clade_name)&apos;&lt;/span&gt; 00_merged_abundance_table.txt |grep &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;o__&apos;&lt;/span&gt;|sed &lt;span class=&quot;s1&quot;&gt;&apos;s/|/;/g&apos;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; 02_metaphlan_class.txt
+&lt;span class=&quot;nb&quot;&gt;grep&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-E&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;(o__)|(clade_name)&apos;&lt;/span&gt; 00_merged_abundance_table.txt |grep &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;f__&apos;&lt;/span&gt;|sed &lt;span class=&quot;s1&quot;&gt;&apos;s/|/;/g&apos;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; 03_metaphlan_order.txt
+&lt;span class=&quot;nb&quot;&gt;grep&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-E&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;(f__)|(clade_name)&apos;&lt;/span&gt; 00_merged_abundance_table.txt |grep &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;g__&apos;&lt;/span&gt;|sed &lt;span class=&quot;s1&quot;&gt;&apos;s/|/;/g&apos;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; 04_metaphlan_family.txt
+&lt;span class=&quot;nb&quot;&gt;grep&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-E&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;(g__)|(clade_name)&apos;&lt;/span&gt; 00_merged_abundance_table.txt |grep &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;s__&apos;&lt;/span&gt;|sed &lt;span class=&quot;s1&quot;&gt;&apos;s/|/;/g&apos;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; 05_metaphlan_genus.txt
+&lt;span class=&quot;nb&quot;&gt;grep&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-E&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;(s__)|(clade_name)&apos;&lt;/span&gt; 00_merged_abundance_table.txt |grep &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;t__&apos;&lt;/span&gt;|sed &lt;span class=&quot;s1&quot;&gt;&apos;s/|/;/g&apos;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; 06_metaphlan_species.txt
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;step4-sequence-assembly-and-trim-contigs-which-length--500bp&quot;&gt;Step4 Sequence assembly and trim contigs which length &amp;lt; 500bp&lt;/h3&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;megahit &lt;span class=&quot;nt&quot;&gt;-1&lt;/span&gt; sample.unmap.1.fastq.gz &lt;span class=&quot;nt&quot;&gt;-2&lt;/span&gt; sample.unmap.2.fastq.gz &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; sample_megahit &lt;span class=&quot;nt&quot;&gt;--out-prefix&lt;/span&gt; sample &lt;span class=&quot;nt&quot;&gt;-t&lt;/span&gt; 8
+seqkit &lt;span class=&quot;nb&quot;&gt;seq&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-m&lt;/span&gt; 500 sample_megahit/sample.contigs.fa &lt;span class=&quot;nt&quot;&gt;--remove-gaps&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; sample.contigs_500.fa
+&lt;span class=&quot;nb&quot;&gt;sed&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-i&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;s/&amp;gt;/&amp;gt;sample_/g&apos;&lt;/span&gt; sample.contigs_500.fa
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;step5-gene-prediction-using-prodigal&quot;&gt;Step5 Gene prediction using prodigal&lt;/h3&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;prodigal &lt;span class=&quot;nt&quot;&gt;-p&lt;/span&gt; meta &lt;span class=&quot;nt&quot;&gt;-a&lt;/span&gt; sample_prot.faa &lt;span class=&quot;nt&quot;&gt;-m&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-d&lt;/span&gt; sample_nucl.fna &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; sample_genes.gff &lt;span class=&quot;nt&quot;&gt;-f&lt;/span&gt; gff &lt;span class=&quot;nt&quot;&gt;-s&lt;/span&gt; sample.stat &lt;span class=&quot;nt&quot;&gt;-i&lt;/span&gt; sample.contigs_500.fa
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;step6-remove-redundancy-gene-and-build-non-redundant-geneset&quot;&gt;Step6 Remove redundancy gene and build non-redundant geneset&lt;/h3&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;cat &lt;/span&gt;sample1_prot.faa sample2_prot.faa ... &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt;  prot.faa
+&lt;span class=&quot;nb&quot;&gt;cat &lt;/span&gt;sample1_nucl.fna sample2_nucl.fna ... &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt;  nucl.fna
+cd-hit &lt;span class=&quot;nt&quot;&gt;-i&lt;/span&gt; prot.faa &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; prot_nonerude.faa &lt;span class=&quot;nt&quot;&gt;-c&lt;/span&gt; 0.95 &lt;span class=&quot;nt&quot;&gt;-T&lt;/span&gt; 8 &lt;span class=&quot;nt&quot;&gt;-n&lt;/span&gt; 5 &lt;span class=&quot;nt&quot;&gt;-d&lt;/span&gt; 0 &lt;span class=&quot;nt&quot;&gt;-aS&lt;/span&gt; 0.9 &lt;span class=&quot;nt&quot;&gt;-g&lt;/span&gt; 1 &lt;span class=&quot;nt&quot;&gt;-sc&lt;/span&gt; 1 &lt;span class=&quot;nt&quot;&gt;-sf&lt;/span&gt; 1 &lt;span class=&quot;nt&quot;&gt;-M&lt;/span&gt; 0
+&lt;span class=&quot;nb&quot;&gt;grep&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;&amp;gt;&apos;&lt;/span&gt; prot_nonerude.faa|awk &lt;span class=&quot;nt&quot;&gt;-F&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos; &apos;&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;{print $1}&apos;&lt;/span&gt;|sed &lt;span class=&quot;s1&quot;&gt;&apos;s/&amp;gt;//g&apos;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; prot_nonerude.list
+seqtk subseq nucl.fna prot_nonerude.list &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; nucl_nonerude.fna
+bwa index nucl_nonerude.fna &lt;span class=&quot;nt&quot;&gt;-p&lt;/span&gt; geneset_bwa
+bioawk &lt;span class=&quot;nt&quot;&gt;-c&lt;/span&gt; fastx &lt;span class=&quot;s1&quot;&gt;&apos;{print $name, length($seq)}&apos;&lt;/span&gt; nucl_nonerude.fna &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; geneset_length.txt
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;step7-function-annotation-using-emapper&quot;&gt;Step7 Function annotation using emapper&lt;/h3&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;# when you install emapper in the system, you will get script &apos;emapper.py&apos;&lt;/span&gt;
+emapper.py &lt;span class=&quot;nt&quot;&gt;-i&lt;/span&gt; prot_nonerude.faa &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; eggnog &lt;span class=&quot;nt&quot;&gt;--cpu&lt;/span&gt; 0 &lt;span class=&quot;nt&quot;&gt;--usemem&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;cut&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-f1&lt;/span&gt;,12 eggnog.emapper.annotations|grep &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;^#&quot;&lt;/span&gt;|sed &lt;span class=&quot;s1&quot;&gt;&apos;s/ko://g&apos;&lt;/span&gt;|sed &lt;span class=&quot;s1&quot;&gt;&apos;1i gene\tko&apos;&lt;/span&gt;|grep &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;-&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; KEGG_KO.txt
+&lt;span class=&quot;nb&quot;&gt;cut&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-f1&lt;/span&gt;,13 eggnog.emapper.annotations|grep &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;^#&quot;&lt;/span&gt;|sed &lt;span class=&quot;s1&quot;&gt;&apos;1i gene\tpathway&apos;&lt;/span&gt;|grep &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;-&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; KEGG_PATHWAY.txt
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;step8-gene-num-count&quot;&gt;Step8 Gene num count&lt;/h3&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;bwa mem &lt;span class=&quot;nt&quot;&gt;-t&lt;/span&gt; 4 geneset_bwa sample.unmap.1.fastq.gz sample.unmap.2.fastq.gz | samtools view &lt;span class=&quot;nt&quot;&gt;-bS&lt;/span&gt; - | samtools &lt;span class=&quot;nb&quot;&gt;sort&lt;/span&gt; - &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; sample_mapping_geneset.bam
+samtools view &lt;span class=&quot;nt&quot;&gt;-F&lt;/span&gt; 4 &lt;span class=&quot;nt&quot;&gt;-F&lt;/span&gt; 256 &lt;span class=&quot;nt&quot;&gt;-F&lt;/span&gt; 2048 sample_mapping_geneset.bam|awk &lt;span class=&quot;s1&quot;&gt;&apos;{if($3!=&quot;*&quot;) print $3}&apos;&lt;/span&gt;|sort| &lt;span class=&quot;nb&quot;&gt;uniq&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-c&lt;/span&gt;|awk &lt;span class=&quot;s1&quot;&gt;&apos;BEGIN {FS=&quot; &quot;;OFS=&quot;,&quot;} {print $2,$1}&apos;&lt;/span&gt; | &lt;span class=&quot;nb&quot;&gt;awk&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;BEGIN {FS=&quot;,&quot;;OFS=&quot;,&quot;} {if ($2 &amp;gt; 1) print $1&quot;\t&quot;$2; else print $1&quot;\t0&quot;}&apos;&lt;/span&gt;|sed &lt;span class=&quot;s1&quot;&gt;&apos;1i gene\tsample&apos;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; sample.count
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;step9-organize-function-results-table&quot;&gt;Step9 Organize function results table&lt;/h3&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;# using /kegg/kegg.py to analysis, like:&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;$python&lt;/span&gt; kegg.py &lt;span class=&quot;nt&quot;&gt;-h&lt;/span&gt;
+usage: python kegg.py &lt;span class=&quot;nt&quot;&gt;-kk&lt;/span&gt; KEGG_KO.txt &lt;span class=&quot;nt&quot;&gt;-kp&lt;/span&gt; KEGG_PATHWAY.txt &lt;span class=&quot;nt&quot;&gt;-mt&lt;/span&gt; merged_file.txt &lt;span class=&quot;nt&quot;&gt;-ok&lt;/span&gt; out_KO.xls &lt;span class=&quot;nt&quot;&gt;-op&lt;/span&gt; out_pathway.xls
+
+Merge KO/pathway count table from eggnog result.
+
+optional arguments:
+  &lt;span class=&quot;nt&quot;&gt;-h&lt;/span&gt;, &lt;span class=&quot;nt&quot;&gt;--help&lt;/span&gt;            show this &lt;span class=&quot;nb&quot;&gt;help &lt;/span&gt;message and &lt;span class=&quot;nb&quot;&gt;exit&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;-kk&lt;/span&gt; KEGGKO, &lt;span class=&quot;nt&quot;&gt;--kegg_KO&lt;/span&gt; KEGGKO
+                        Sample&lt;span class=&quot;s1&quot;&gt;&apos;s kegg KO information, such as KEGG_KO.txt
+  -kp KEGGPATHWAY, --kegg_pathway KEGGPATHWAY
+                        Sample&apos;&lt;/span&gt;s kegg pathway information, such as
+                        KEGG_PATHWAY.txt
+  &lt;span class=&quot;nt&quot;&gt;-mt&lt;/span&gt; MERGETABLE, &lt;span class=&quot;nt&quot;&gt;--merge_table&lt;/span&gt; MERGETABLE
+                        Sample&lt;span class=&quot;s1&quot;&gt;&apos;s merged gene count table, such as
+                        merged_file.txt
+  -ok OUTKO, --out_KO OUTKO
+                        Output KO result, such as out_KO.xls
+  -op OUTPATHWAY, --out_pathway OUTPATHWAY
+                        Output pathway result, such as out_pathway.xls
+  -t TMP, --tmp TMP     Tmp files dir
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;h2 id=&quot;contact-&quot;&gt;Contact 🐖&lt;/h2&gt;
+&lt;p&gt;Wanjin Hu (wanjin.hu@outlook.com)&lt;/p&gt;</content><author><name>Wanjin Hu</name></author><category term="Metagenomic" /><summary type="html">提供一个宏基因组分析流程。</summary></entry><entry><title type="html">解决 Groovy 引起的一次 OOM 告警</title><link href="http://localhost:4000/2023/03/22/oom-caused-by-groovy/" rel="alternate" type="text/html" title="解决 Groovy 引起的一次 OOM 告警" /><published>2023-03-22T00:00:00+08:00</published><updated>2023-03-22T00:00:00+08:00</updated><id>http://localhost:4000/2023/03/22/oom-caused-by-groovy</id><content type="html" xml:base="http://localhost:4000/2023/03/22/oom-caused-by-groovy/">&lt;p&gt;线上收到告警，有个服务的一个 pod was OOM killed.&lt;/p&gt;
+
+&lt;h2 id=&quot;问题分析&quot;&gt;问题分析&lt;/h2&gt;
+
+&lt;p&gt;从监控系统来看，被 kill 的节点 A 在重启前，堆内存使用随着 YoungGC 规律波动，元空间占用较高，且一直缓慢增长到了400MB以上——该应用代码量不大，按理不应该占用这么多。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/posts/java/oom-killed-pod.png&quot; alt=&quot;oom killed pod&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;而与它同容器组的另一个节点 B 看起来更不正常，平均响应时间明显长于另外的节点，且在堆内存已经降下来的情况下还多次 FullGC，并且有很多 java.lang.OutOfMemoryError。晚些时候该节点触发了两次 FullGC 次数过多的告警。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/posts/java/oom-fullgc-pod.png&quot; alt=&quot;oom fullgc pod&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;OutOfMemoryError 异常堆栈：&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;java.lang.OutOfMemoryError : Metaspace
+    at java.lang.ClassLoader.defineClass1(Native Method)
+    at java.lang.ClassLoader.defineClass(ClassLoader.java:763)
+    at java.security.SecureClassLoader.defineClass(SecureClassLoader.java:142)
+    at groovy.lang.GroovyClassLoader.access$400(GroovyClassLoader.java:62)
+    at groovy.lang.GroovyClassLoader$ClassCollector.createClass(GroovyClassLoader.java:500)
+    at groovy.lang.GroovyClassLoader$ClassCollector.onClassNode(GroovyClassLoader.java:517)
+    at groovy.lang.GroovyClassLoader$ClassCollector.call(GroovyClassLoader.java:521)
+    at org.codehaus.groovy.control.CompilationUnit$16.call(CompilationUnit.java:822)
+    at org.codehaus.groovy.control.CompilationUnit.applyToPrimaryClassNodes(CompilationUnit.java:1053)
+    at org.codehaus.groovy.control.CompilationUnit.doPhaseOperation(CompilationUnit.java:591)
+    at org.codehaus.groovy.control.CompilationUnit.processPhaseOperations(CompilationUnit.java:569)
+    at org.codehaus.groovy.control.CompilationUnit.compile(CompilationUnit.java:546)
+    at groovy.lang.GroovyClassLoader.doParseClass(GroovyClassLoader.java:298)
+    at groovy.lang.GroovyClassLoader.parseClass(GroovyClassLoader.java:268)
+    at groovy.lang.GroovyShell.parseClass(GroovyShell.java:688)
+    at groovy.lang.GroovyShell.parse(GroovyShell.java:700)
+    at groovy.lang.GroovyShell.evaluate(GroovyShell.java:584)
+    at groovy.lang.GroovyShell.evaluate(GroovyShell.java:623)
+    at groovy.lang.GroovyShell.evaluate(GroovyShell.java:594)
+    at org.springframework.scripting.groovy.GroovyScriptEvaluator.evaluate(GroovyScriptEvaluator.java:118)
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;结合以上异常堆栈与节点 B 的现象推测：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;执行 &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;GroovyScriptEvaluator.evaluate&lt;/code&gt; 时，会动态生成一些 Class，导致元空间占用持续上升；&lt;/li&gt;
+  &lt;li&gt;FullGC 主要不是为了回收堆内存，很可能是为了回收元空间；&lt;/li&gt;
+  &lt;li&gt;FullGC 也无法成功回收 1 中动态生成的 Class 占用的元空间。&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;根据推测，用 Groovy 和 Metaspace 作为关键字进行了一些搜索，找到如下一篇相关性比较高的文章：&lt;a href=&quot;https://blog.csdn.net/jinzhencs/article/details/74562973&quot;&gt;记一次线上Groovy导致的OOM的问题解决过程&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;以及它里面引用的文章： &lt;a href=&quot;https://my.oschina.net/chenxiaojie/blog/835934&quot;&gt;Groovy 动态加载类踩中的那些坑&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;里面提到了 Groovy 的一个 Bug： &lt;a href=&quot;https://issues.apache.org/jira/browse/GROOVY-7913&quot;&gt;ClassInfo.globalClassValue lead to GroovyClassLoader can’t unload classes&lt;/a&gt;，大意是 Groovy 动态生成的类因为被缓存和引用，导致无法 unload，从而引发元空间随着时间推移一直增长且无法释放。在 Groovy 2.4.6 引入，2.4.8 修复。&lt;/p&gt;
+
+&lt;p&gt;检查我们项目里的 groovy-all 包版本，是 2.4.7，那很有可能命中这个 bug。&lt;/p&gt;
+
+&lt;h2 id=&quot;本地验证&quot;&gt;本地验证&lt;/h2&gt;
+
+&lt;p&gt;构建一个测试应用，启动后循环调用 &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;GroovyScriptEvaluator.evaluate&lt;/code&gt;，如：&lt;/p&gt;
+
+&lt;div class=&quot;language-java highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nd&quot;&gt;@SpringBootApplication&lt;/span&gt;
+&lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;class&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;GroovyOomDemoApplication&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;implements&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;CommandLineRunner&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+
+    &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;static&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;main&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;[]&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nc&quot;&gt;SpringApplication&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;run&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;GroovyOomDemoApplication&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;class&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+
+    &lt;span class=&quot;nd&quot;&gt;@Override&lt;/span&gt;
+    &lt;span class=&quot;kd&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;kt&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;nf&quot;&gt;run&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;...&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;args&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;kd&quot;&gt;throws&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Exception&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nc&quot;&gt;GroovyScriptEvaluator&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;evaluator&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;GroovyScriptEvaluator&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+
+        &lt;span class=&quot;nc&quot;&gt;ScriptSource&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;scriptSource&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;StaticScriptSource&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;a == 3&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;nc&quot;&gt;Map&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt;&lt;span class=&quot;nc&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Object&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;params&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;HashMap&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;&amp;lt;&amp;gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;nc&quot;&gt;Random&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;rand&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;new&lt;/span&gt; &lt;span class=&quot;nc&quot;&gt;Random&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;();&lt;/span&gt;
+
+        &lt;span class=&quot;k&quot;&gt;while&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kc&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;{&lt;/span&gt;
+            &lt;span class=&quot;nc&quot;&gt;Integer&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;rand&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;nextInt&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+            &lt;span class=&quot;n&quot;&gt;params&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;put&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;a&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+            &lt;span class=&quot;nc&quot;&gt;Object&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;evaluator&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;evaluate&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;scriptSource&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;params&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+            &lt;span class=&quot;nc&quot;&gt;System&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;out&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;na&quot;&gt;printf&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;a = %d, result is %s%n&quot;&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;);&lt;/span&gt;
+        &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;然后在运行的 JVM 参数里添加一些参数：&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;-XX:MetaspaceSize=64m
+-XX:MaxMetaspaceSize=64m
+-verbose:class
+-verbose:gc
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;设置最大元空间大小、打印类的 load/unload、以及 GC 的信息。&lt;/p&gt;
+
+&lt;p&gt;&lt;em&gt;测试代码发布在 &lt;a href=&quot;https://github.com/mzlogin/groovy-oom-demo&quot;&gt;https://github.com/mzlogin/groovy-oom-demo&lt;/a&gt;&lt;/em&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;使用-groovy-all-247-版本运行的情况&quot;&gt;使用 groovy-all 2.4.7 版本运行的情况&lt;/h3&gt;
+
+&lt;p&gt;控制台打印：&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;……
+[Loaded Script1 from file:/groovy/shell]
+a = 1, result is false
+[Loaded Script1 from file:/groovy/shell]
+a = 2, result is false
+[Loaded Script1 from file:/groovy/shell]
+a = 0, result is false
+[Loaded Script1 from file:/groovy/shell]
+a = 8, result is false
+[GC (Metadata GC Threshold)  838057K-&amp;gt;253201K(1080832K), 0.1350074 secs]
+[Full GC (Metadata GC Threshold)  253201K-&amp;gt;244956K(1232896K), 0.4860932 secs]
+[GC (Last ditch collection)  244956K-&amp;gt;245557K(1421824K), 0.0403506 secs]
+……
+Exception: java.lang.OutOfMemoryError thrown from the UncaughtExceptionHandler in thread &quot;main&quot;
+……
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Profiler：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/posts/java/groovy-2.4.7-crashed.png&quot; alt=&quot;groovy 2.4.7 crashed&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;从控制台打印以及 Profiler 来看，程序先是打印了很多 &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;[Loaded Script1 from file:/groovy/shell]&lt;/code&gt;，然后最后当 Non-Heap Memory 占用很高之后，开始因为达到 Metadata GC Threshold，疯狂 YongGC + FullGC，但 Non-Heap Memory 也降不下来，最终程序很快直接挂掉了。&lt;/p&gt;
+
+&lt;h3 id=&quot;升级为-groovy-all-248-版本运行的情况&quot;&gt;升级为 groovy-all 2.4.8 版本运行的情况&lt;/h3&gt;
+
+&lt;p&gt;控制台打印：&lt;/p&gt;
+
+&lt;div class=&quot;language-plaintext highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;……
+[Loaded Script1 from file:/groovy/shell]
+a = 9, result is false
+[Loaded Script1 from file:/groovy/shell]
+a = 3, result is true
+[Loaded Script1 from file:/groovy/shell]
+a = 7, result is false
+[Loaded Script1 from file:/groovy/shell]
+a = 7, result is false
+[GC (Metadata GC Threshold)  722452K-&amp;gt;251702K(1090560K), 0.0483118 secs]
+[Full GC (Metadata GC Threshold)  251702K-&amp;gt;240778K(1254912K), 0.4303570 secs]
+[GC (Last ditch collection)  240778K-&amp;gt;241270K(1373696K), 0.0274501 secs]
+[Full GC (Last ditch collection) 
+[Unloading class Script1 0x00000007c103c428]
+[Unloading class Script1 0x00000007c103bc28]
+[Unloading class Script1 0x00000007c103b428]
+[Unloading class Script1 0x00000007c103ac28]
+[Unloading class Script1 0x00000007c103a428]
+……
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Profiler：&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/posts/java/groovy-2.4.8-worked.png&quot; alt=&quot;groovy 2.4.8 worked&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;同上面一样，程序开始也是打印了很多 &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;[Loaded Script1 from file:/groovy/shell]&lt;/code&gt;，但不同的是达到 Metadata GC Threshold 进行 GC 之后，可以将 Non-Heap Memory 占用降下来，并且从控制台可以看到在 GC 时打印了很多 &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;[Unloading class Script1 xxx]&lt;/code&gt;，程序持续运行很长时间也没问题。&lt;/p&gt;
+
+&lt;p&gt;另外有个疑问：这个应用上线很长时间了，与 Groovy 相关的逻辑很久没有动过了，为什么以前没有出现这种现象？&lt;/p&gt;
+
+&lt;p&gt;答案：以前这个应用时不时会发一次版，重置 Metaspace，而这次有两个多月没有发版了，Metaspace 一直增长，最终达到了阈值。&lt;/p&gt;
+
+&lt;h2 id=&quot;解决方法&quot;&gt;解决方法&lt;/h2&gt;
+
+&lt;p&gt;升级 groovy-all 至 2.4.8（含）版本以上。&lt;/p&gt;
+
+&lt;h2 id=&quot;参考&quot;&gt;参考&lt;/h2&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://blog.csdn.net/jinzhencs/article/details/74562973&quot;&gt;记一次线上Groovy导致的OOM的问题解决过程&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://my.oschina.net/chenxiaojie/blog/835934&quot;&gt;Groovy 动态加载类踩中的那些坑&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://issues.apache.org/jira/browse/GROOVY-7913&quot;&gt;ClassInfo.globalClassValue lead to GroovyClassLoader can’t unload classes&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content><author><name>Wanjin Hu</name></author><category term="Java" /><summary type="html">线上收到告警，有个服务的一个 pod was OOM killed.</summary></entry></feed>

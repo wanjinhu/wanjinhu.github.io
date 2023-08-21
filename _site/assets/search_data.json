@@ -1,0 +1,148 @@
+
+
+[
+  
+  
+    {
+      "title"    : "页面没有找到",
+      "url"      : "http://localhost:4000/404.html",
+      "keywords" : "404"
+    } ,
+  
+  
+  
+    {
+      "title"    : "About",
+      "url"      : "http://localhost:4000/about/",
+      "keywords" : "Wanjin Hu, 胡万金"
+    } ,
+  
+  
+  
+    {
+      "title"    : "归档",
+      "url"      : "http://localhost:4000/archives/",
+      "keywords" : "归档"
+    } ,
+  
+  
+  
+    {
+      "title"    : "Categories",
+      "url"      : "http://localhost:4000/categories/",
+      "keywords" : "分类"
+    } ,
+  
+  
+  
+    {
+      "title"    : "捐助 / Donate",
+      "url"      : "http://localhost:4000/donate/",
+      "keywords" : "Donate"
+    } ,
+  
+  
+  
+    {
+      "title"    : "Fragments",
+      "url"      : "http://localhost:4000/fragments/",
+      "keywords" : "fragments"
+    } ,
+  
+  
+  
+  
+  
+    {
+      "title"    : "Links",
+      "url"      : "http://localhost:4000/links/",
+      "keywords" : "友情链接"
+    } ,
+  
+  
+  
+    {
+      "title"    : "mindmap",
+      "url"      : "http://localhost:4000/mindmap-viewer/",
+      "keywords" : "mindmap"
+    } ,
+  
+  
+  
+    {
+      "title"    : "Open Source Projects",
+      "url"      : "http://localhost:4000/open-source/",
+      "keywords" : "开源,open-source,GitHub,开源项目"
+    } ,
+  
+  
+  
+  
+  
+    {
+      "title"    : "Wiki",
+      "url"      : "http://localhost:4000/wiki/",
+      "keywords" : "维基, Wiki"
+    } ,
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+  
+    {
+      "title"    : "解决 Groovy 引起的一次 OOM 告警",
+      "category" : "Java",
+      "content": "线上收到告警，有个服务的一个 pod was OOM killed. 问题分析 从监控系统来看，被 kill 的节点 A 在重启前，堆内存使用随着 YoungGC 规律波动，元空间占用较高，且一直缓慢增长到了400MB以上——该应用代码量不大，按理不应该占用这么多。 而与它同容器组的另一个节点 B 看起来更不正常，平均响应时间明显长于另外的节点，且在堆内存已经降下来的情况下还多次 FullGC，并且有很多 java.lang.OutOfMemoryError。晚些时候该节点触发了两次 FullGC 次数过多的告警。 OutOfMemoryError 异常堆栈： java.lang.OutOfMemoryError : Metaspace  at java.lang.ClassLoader.defineClass1(Native Method)  at java.lang.ClassLoader.defineClass(ClassLoader.java:763)  at java.security.SecureClassLoader.defineClass(SecureClassLoader.java:142)  at groovy.lang.GroovyClassLoader.access$400(GroovyClassLoader.java:62)  at groovy.lang.GroovyClassLoader$ClassCollector.createClass(GroovyClassLoader.java:500)  at groovy.lang.GroovyClassLoader$ClassCollector.onClassNode(GroovyClassLoader.java:517)  at groovy.lang.GroovyClassLoader$ClassCollector.call(GroovyClassLoader.java:521)  at org.codehaus.groovy.control.CompilationUnit$16.call(CompilationUnit.java:822)  at org.codehaus.groovy.control.CompilationUnit.applyToPrimaryClassNodes(CompilationUnit.java:1053)  at org.codehaus.groovy.control.CompilationUnit.doPhaseOperation(CompilationUnit.java:591)  at org.codehaus.groovy.control.CompilationUnit.processPhaseOperations(CompilationUnit.java:569)  at org.codehaus.groovy.control.CompilationUnit.compile(CompilationUnit.java:546)  at groovy.lang.GroovyClassLoader.doParseClass(GroovyClassLoader.java:298)  at groovy.lang.GroovyClassLoader.parseClass(GroovyClassLoader.java:268)  at groovy.lang.GroovyShell.parseClass(GroovyShell.java:688)  at groovy.lang.GroovyShell.parse(GroovyShell.java:700)  at groovy.lang.GroovyShell.evaluate(GroovyShell.java:584)  at groovy.lang.GroovyShell.evaluate(GroovyShell.java:623)  at groovy.lang.GroovyShell.evaluate(GroovyShell.java:594)  at org.springframework.scripting.groovy.GroovyScriptEvaluator.evaluate(GroovyScriptEvaluator.java:118) 结合以上异常堆栈与节点 B 的现象推测：  执行 GroovyScriptEvaluator.evaluate 时，会动态生成一些 Class，导致元空间占用持续上升； FullGC 主要不是为了回收堆内存，很可能是为了回收元空间； FullGC 也无法成功回收 1 中动态生成的 Class 占用的元空间。 根据推测，用 Groovy 和 Metaspace 作为关键字进行了一些搜索，找到如下一篇相关性比较高的文章：记一次线上Groovy导致的OOM的问题解决过程 以及它里面引用的文章： Groovy 动态加载类踩中的那些坑 里面提到了 Groovy 的一个 Bug： ClassInfo.globalClassValue lead to GroovyClassLoader can’t unload classes，大意是 Groovy 动态生成的类因为被缓存和引用，导致无法 unload，从而引发元空间随着时间推移一直增长且无法释放。在 Groovy 2.4.6 引入，2.4.8 修复。 检查我们项目里的 groovy-all 包版本，是 2.4.7，那很有可能命中这个 bug。 本地验证 构建一个测试应用，启动后循环调用 GroovyScriptEvaluator.evaluate，如： @SpringBootApplication public class GroovyOomDemoApplication implements CommandLineRunner { public static void main(String[] args) {  SpringApplication.run(GroovyOomDemoApplication.class, args);  } @Override  public void run(String... args) throws Exception {  GroovyScriptEvaluator evaluator = new GroovyScriptEvaluator();  ScriptSource scriptSource = new StaticScriptSource(a == 3);  Map&lt;String, Object&gt; params = new HashMap&lt;&gt;(0);  Random rand = new Random();  while (true) {   Integer a = rand.nextInt(10);   params.put(a, a);   Object result = evaluator.evaluate(scriptSource, params);   System.out.printf(a = %d, result is %s%n, a, result);  }  } } 然后在运行的 JVM 参数里添加一些参数： -XX:MetaspaceSize=64m -XX:MaxMetaspaceSize=64m -verbose:class -verbose:gc 设置最大元空间大小、打印类的 load/unload、以及 GC 的信息。 测试代码发布在 https://github.com/mzlogin/groovy-oom-demo 使用 groovy-all 2.4.7 版本运行的情况 控制台打印： …… [Loaded Script1 from file:/groovy/shell] a = 1, result is false [Loaded Script1 from file:/groovy/shell] a = 2, result is false [Loaded Script1 from file:/groovy/shell] a = 0, result is false [Loaded Script1 from file:/groovy/shell] a = 8, result is false [GC (Metadata GC Threshold) 838057K-&gt;253201K(1080832K), 0.1350074 secs] [Full GC (Metadata GC Threshold) 253201K-&gt;244956K(1232896K), 0.4860932 secs] [GC (Last ditch collection) 244956K-&gt;245557K(1421824K), 0.0403506 secs] …… Exception: java.lang.OutOfMemoryError thrown from the UncaughtExceptionHandler in thread main …… Profiler： 从控制台打印以及 Profiler 来看，程序先是打印了很多 [Loaded Script1 from file:/groovy/shell]，然后最后当 Non-Heap Memory 占用很高之后，开始因为达到 Metadata GC Threshold，疯狂 YongGC + FullGC，但 Non-Heap Memory 也降不下来，最终程序很快直接挂掉了。 升级为 groovy-all 2.4.8 版本运行的情况 控制台打印： …… [Loaded Script1 from file:/groovy/shell] a = 9, result is false [Loaded Script1 from file:/groovy/shell] a = 3, result is true [Loaded Script1 from file:/groovy/shell] a = 7, result is false [Loaded Script1 from file:/groovy/shell] a = 7, result is false [GC (Metadata GC Threshold) 722452K-&gt;251702K(1090560K), 0.0483118 secs] [Full GC (Metadata GC Threshold) 251702K-&gt;240778K(1254912K), 0.4303570 secs] [GC (Last ditch collection) 240778K-&gt;241270K(1373696K), 0.0274501 secs] [Full GC (Last ditch collection) [Unloading class Script1 0x00000007c103c428] [Unloading class Script1 0x00000007c103bc28] [Unloading class Script1 0x00000007c103b428] [Unloading class Script1 0x00000007c103ac28] [Unloading class Script1 0x00000007c103a428] …… Profiler： 同上面一样，程序开始也是打印了很多 [Loaded Script1 from file:/groovy/shell]，但不同的是达到 Metadata GC Threshold 进行 GC 之后，可以将 Non-Heap Memory 占用降下来，并且从控制台可以看到在 GC 时打印了很多 [Unloading class Script1 xxx]，程序持续运行很长时间也没问题。 另外有个疑问：这个应用上线很长时间了，与 Groovy 相关的逻辑很久没有动过了，为什么以前没有出现这种现象？ 答案：以前这个应用时不时会发一次版，重置 Metaspace，而这次有两个多月没有发版了，Metaspace 一直增长，最终达到了阈值。 解决方法 升级 groovy-all 至 2.4.8（含）版本以上。 参考  记一次线上Groovy导致的OOM的问题解决过程 Groovy 动态加载类踩中的那些坑 ClassInfo.globalClassValue lead to GroovyClassLoader can’t unload classes ",
+      "url"      : "http://localhost:4000/2023/03/22/oom-caused-by-groovy/",
+      "keywords" : "Groovy, OutOfMemoryError, OOM, Java, 系统稳定性"
+    } ,
+  
+    {
+      "title"    : "宏基因组分析流程",
+      "category" : "Metagenomic",
+      "content": "提供一个宏基因组分析流程。 Here is a metagenomic sequence data analysis pipeline, nothing different with other pipelines. But if you want to get to know the metagenomic analysis pipeline step by step, maybe you can get some details from this repository. And it is suitable for the beginners i think. Scripts and test files you can find here: Metagenomic-Analysis-Pipeline Pipeline overview 🐫 Raw sequence quality trim Host reference sequence remove Metaphlan for composition of microbial communities Sequence assembly Gene prediction Remove redundancy gene and build non-redundant geneset Function annotation using emapper Organize function results table Quick start 🦏 $python pipe_metagenome.py -h usage: ================================================================= python pipe_metagenome.py  t--fastq_list fq.list  t--output_dir result  t--ref ref_bowtie2_index ref_bowtie2_index: canis: /root/database/Canis_GCF_000002285.5/Canis_GCF_000002285_5 human: /root/database/hg38_GCF_000001405.40/GCF_000001405.40/hg38 ================================================================= Pipeline of metagenome optional arguments: -h, --help  show this help message and exit -l FQLIST, --fastq_list FQLIST     raw fq list -o OUTDIR, --output_dir OUTDIR     result output -r REF, --ref REF  ref genome bowtie2 index What you need to do is to provide two input files: –fastq_list # sample - fq_R1 - fq_R2 list, format like fq.list –ref # host reference genome bowtie2 index And set output dir --output_dir, all of output results would be included. Output files explanation 🐊 Output files tree (not show all files) ├── 00-result     # most important results in this fold │   ├── 00_merged_abundance_table.txt # composition of microbial communities │   ├── 01_metaphlan_phylum.txt  # communities in phylum level │   ├── 02_metaphlan_class.txt  # communities in class level │   ├── 03_metaphlan_order.txt  # communities in order level │   ├── 04_metaphlan_family.txt  # communities in family level │   ├── 05_metaphlan_genus.txt  # communities in genus level │   ├── 06_metaphlan_species.txt  # communities in species level │   ├── KO_samples.xls   # KEGG KO gene composition table │   └── pathway_samples.xls   # KEGG pathway composition table ├── 01-fastp_trim ├── 02-ref_remove ├── 03-metaphlan ├── 04-megahit ├── 05-prodigal ├── 06-cdhit ├── 07-emapper ├── 08-sam_count ├── 09-emapper_kegg Output important result files explanation metaphlan_diff-levels.txt column 1 : communities information column 2 ~ : communities abundance percent of samples  clade_name tC1 k__Bacteria;p__Firmicutes t86.51132 k__Bacteria;p__Actinobacteria t6.52203 k__Bacteria;p__Bacteroidetes t4.24729 k__Bacteria;p__Proteobacteria t1.96422 k__Bacteria;p__Fusobacteria t0.75514 k__Bacteria;p__Tenericutes t0.0 k__Bacteria;p__Spirochaetes t0.0 k__Bacteria;p__Verrucomicrobia t0.0 ...  KO_samples.xls column 1 : KO gene name column 2 : KO gene description column 3 : KO gene id column 4 ~ : KO gene number of samples  KO_name tKO_des tKO tC1 E1.1.1.1, adh talcohol dehydrogenase [EC:1.1.1.1] tK00001 t2817.0 AKR1A1, adh talcohol dehydrogenase (NADP+) [EC:1.1.1.2] tK00002 t254.0 hom thomoserine dehydrogenase [EC:1.1.1.3] tK00003 t2890.0 BDH, butB t(R,R)-butanediol dehydrogenase / meso-butanediol dehydrogenase / diacetyl reductase [EC:1.1.1.4 1.1.1.- 1.1.1.303] tK00004 t20.0 ...  pathway_samples.xls column 1 : pathway level 1 column 2 : pathway level 2 column 3 : pathway level 3 column 4 : pathway id column 5 ~ : pathway gene number of samples  level1 tlevel2 tlevel3 tpathway tC1 Metabolism tCarbohydrate metabolism tGlycolysis / Gluconeogenesis tko00010 t91005.0 Metabolism tCarbohydrate metabolism tCitrate cycle (TCA cycle) tko00020 t31442.0 Metabolism tCarbohydrate metabolism tPentose phosphate pathway tko00030 t53905.0 Metabolism tCarbohydrate metabolism tPentose and glucuronate interconversions tko00040 t21334.0 ...   Step by step 🦥 Step1 Raw sequence quality trim using fastp fastp -i sample_1.fastq.gz     -o sample_clean.1.fastq.gz     -I sample_2.fastq.gz     -O sample_clean.2.fastq.gz     -w 8 -h sample.html -j sample.json Step2 Host reference sequence remove bowtie2 -x ref_bowtie2_index -1 sample_clean.1.fastq.gz -2 sample_clean.2.fastq.gz -S sample.sam 2&gt;sample.mapping.log samtools fastq -@ 8 -f 4 sample.sam -1 sample.unmap.1.fastq.gz -2 sample.unmap.2.fastq.gz -s sample.unmap.single.fastq.gz Step3 Metaphlan for composition of microbial communities zcat sample.unmap.1.fastq.gz sample.unmap.2.fastq.gz|metaphlan --input_type fastq --bowtie2out sample_bowtie2.bz2 --output_file sample_metaphlan.tsv --nproc 8 # when you install metaphlan in the system, you will get script 'merge_metaphlan_tables.py', that's for merge different samples metaphlan result in one file, like: merge_metaphlan_tables.py *.tsv &gt; 00_merged_abundance_table.txt grep -E '(p__)|(clade_name)' 00_merged_abundance_table.txt |grep -v 'c__'|sed 's/|/;/g' &gt; 01_metaphlan_phylum.txt grep -E '(c__)|(clade_name)' 00_merged_abundance_table.txt |grep -v 'o__'|sed 's/|/;/g' &gt; 02_metaphlan_class.txt grep -E '(o__)|(clade_name)' 00_merged_abundance_table.txt |grep -v 'f__'|sed 's/|/;/g' &gt; 03_metaphlan_order.txt grep -E '(f__)|(clade_name)' 00_merged_abundance_table.txt |grep -v 'g__'|sed 's/|/;/g' &gt; 04_metaphlan_family.txt grep -E '(g__)|(clade_name)' 00_merged_abundance_table.txt |grep -v 's__'|sed 's/|/;/g' &gt; 05_metaphlan_genus.txt grep -E '(s__)|(clade_name)' 00_merged_abundance_table.txt |grep -v 't__'|sed 's/|/;/g' &gt; 06_metaphlan_species.txt Step4 Sequence assembly and trim contigs which length &lt; 500bp megahit -1 sample.unmap.1.fastq.gz -2 sample.unmap.2.fastq.gz -o sample_megahit --out-prefix sample -t 8 seqkit seq -m 500 sample_megahit/sample.contigs.fa --remove-gaps &gt; sample.contigs_500.fa sed -i 's/&gt;/&gt;sample_/g' sample.contigs_500.fa Step5 Gene prediction using prodigal prodigal -p meta -a sample_prot.faa -m -d sample_nucl.fna -o sample_genes.gff -f gff -s sample.stat -i sample.contigs_500.fa Step6 Remove redundancy gene and build non-redundant geneset cat sample1_prot.faa sample2_prot.faa ... &gt; prot.faa cat sample1_nucl.fna sample2_nucl.fna ... &gt; nucl.fna cd-hit -i prot.faa -o prot_nonerude.faa -c 0.95 -T 8 -n 5 -d 0 -aS 0.9 -g 1 -sc 1 -sf 1 -M 0 grep '&gt;' prot_nonerude.faa|awk -F ' ' '{print $1}'|sed 's/&gt;//g' &gt; prot_nonerude.list seqtk subseq nucl.fna prot_nonerude.list &gt; nucl_nonerude.fna bwa index nucl_nonerude.fna -p geneset_bwa bioawk -c fastx '{print $name, length($seq)}' nucl_nonerude.fna &gt; geneset_length.txt Step7 Function annotation using emapper # when you install emapper in the system, you will get script 'emapper.py' emapper.py -i prot_nonerude.faa -o eggnog --cpu 0 --usemem cut -f1,12 eggnog.emapper.annotations|grep -v ^#|sed 's/ko://g'|sed '1i gene  tko'|grep -v - &gt; KEGG_KO.txt cut -f1,13 eggnog.emapper.annotations|grep -v ^#|sed '1i gene  tpathway'|grep -v - &gt; KEGG_PATHWAY.txt Step8 Gene num count bwa mem -t 4 geneset_bwa sample.unmap.1.fastq.gz sample.unmap.2.fastq.gz | samtools view -bS - | samtools sort - &gt; sample_mapping_geneset.bam samtools view -F 4 -F 256 -F 2048 sample_mapping_geneset.bam|awk '{if($3!=*) print $3}'|sort| uniq -c|awk 'BEGIN {FS= ;OFS=,} {print $2,$1}' | awk 'BEGIN {FS=,;OFS=,} {if ($2 &gt; 1) print $1  t$2; else print $1  t0}'|sed '1i gene  tsample' &gt; sample.count Step9 Organize function results table # using /kegg/kegg.py to analysis, like: $python kegg.py -h usage: python kegg.py -kk KEGG_KO.txt -kp KEGG_PATHWAY.txt -mt merged_file.txt -ok out_KO.xls -op out_pathway.xls Merge KO/pathway count table from eggnog result. optional arguments: -h, --help  show this help message and exit -kk KEGGKO, --kegg_KO KEGGKO     Sample's kegg KO information, such as KEGG_KO.txt -kp KEGGPATHWAY, --kegg_pathway KEGGPATHWAY     Sample's kegg pathway information, such as     KEGG_PATHWAY.txt -mt MERGETABLE, --merge_table MERGETABLE     Sample's merged gene count table, such as     merged_file.txt -ok OUTKO, --out_KO OUTKO     Output KO result, such as out_KO.xls -op OUTPATHWAY, --out_pathway OUTPATHWAY     Output pathway result, such as out_pathway.xls -t TMP, --tmp TMP  Tmp files dir Contact 🐖 Wanjin Hu (wanjin.hu@outlook.com) ",
+      "url"      : "http://localhost:4000/2023/08/10/pipeline-metagenomic-analysis/",
+      "keywords" : "Metagenomic, Microbiome"
+    } ,
+  
+    {
+      "title"    : "GitHub",
+      "category" : "",
+      "content": "打开/下载文件加速  项目内的文件 比如要下载 https://github.com/junegunn/vim-plug/plug.vim，那可以将 github.com 替换成 fastly.jsdelivr.net/gh，最终地址 https://fastly.jsdelivr.net/gh/junegunn/vim-plug/plug.vim 参考 https://mazhuang.org/2020/05/01/cdn-for-github-pages/   Releases 里的文件 比如要下载 https://github.com/PowerShell/PowerShell/releases/download/v7.1.0-preview.6/PowerShell-7.1.0-preview.6-win-x64.zip，可以将它填到 https://d.serctl.com/ 下载。 参考 https://toolwa.com/github/  ",
+      "url"      : "http://localhost:4000/wiki/github/",
+      "keywords" : "GitHub"
+    } ,
+  
+    {
+      "title"    : "Vim",
+      "category" : "",
+      "content": "移动 以字（符）为单位    功能  按键     上  k    下  j    左  h    右  l   以单词为单位    功能  按键     前一个单词尾  ge    后一个单词首  w    本单词首（已在本词首则跳到前一单词首）  b    本单词尾（已在本词尾则跳到后一单词尾）  e   以屏幕为单位    功能  按键     向下翻页  CTRL-f    向上翻页  CTRL-b    向下翻半页  CTRL-d    向上翻半页  CTRL-u    向上一行  CTRL-y    向下一行  CTRL-e    光标移到屏幕上方  H    光标移到屏幕中间  M    光标移到屏幕下方  L    光标所在位置移到屏幕上方  zt    光标所在位置移到屏幕中间  zz    光标所在位置移到屏幕下方  zb   行号    功能  按键     跳到第 num 行  :num 或 numG 或 numgg   文件    功能  按键     跳到文件头  gg    跳到文件尾  G   编辑 复制    功能  按键     复制光标所在单词  yiw    复制光标所在行  yy   粘贴    功能  按键     在光标之后粘贴  p    在光标之前粘贴  P   剪切    功能  按键     剪切选中区域  d    剪切光标所在行  dd   替换    功能  按键     将全文中的 str1 替换为 str2  :%s/str1/str2/g    将 1 到 5 行中的 str1 替换为 str2  :1,5s/str1/str2/g   大小写    功能  按键     将选中内容大小写互换  ~    将选中内容全转为小写  gu    将选中内容全转为大写  gU    将当前行变成小写  guu    将当前行变成大写  gUU    将匹配内容替换为大写  :%s/xxx/  U&amp;/g    将匹配内容替换为小写  :%s/xxx/  L&amp;/g   注：&amp; 代表正则表达式全部匹配项，另外还有   1、’  2’、…、  9 代表第 1 到 9 个匹配项。 选择    功能  按键     选中上一次选择的区域  gv    选中括号内区域  vi{、vi[、vi(   搜索    功能  按键     向下查找字符串  /str    向上查找字符串  ?str    查找下一个  n    查找上一个  N    向下查找光标所在单词  *    向下查找光标所在单词  #   正则表达式    功能  按键     匹配单词左边界    &lt;    匹配单词右边界    &gt;    去重  :g/^  (.*  )$    1/d   常用    功能  按键     删除空行  :g/^$/d    撤销/UNDO  u    重做/REDO  C-r    统计行/单词/字符/字节数  g C-g    去掉 UTF-8 BOM  :set nobomb    保留 UTF-8 BOM  :set bomb   全局    功能  按键     退出  :q    强制执行  !    执行外部命令  :!   文件操作    功能  按键     打开  :e    打开文件对话框  :bro e    保存  :w    另存为对话框  :bro w    查看历史文件列表  :ol    查看并打开历史文件  :bro ol    重命名当前文件  :f filename   vimdiff    功能  按键     移动到上一个不同处  [c    移动到下一个不同处  ]c    该差异点使用当前文件的  dp    该差异点使用其它文件的  do    手动刷新重新比较  :diffupdate   Buffer    功能  按键     查看 Buffer 列表  :ls    转到 Buffer 列表中的下一个 Buffer  :bn    转到 Buffer 列表中的上一个 Buffer  :bp    转到 Buffer 列表中的 num 号 Buffer  :bnum    你之前待过的一个 Buffer  :b#    从 Buffer 列表中删除 num 号 Buffer  :bdnum   组合命令 可以使用 | 来组合命令，比如 cmd1 | cmd2。 代码    功能  按键     格式化代码  gg=G    去除 1-20 行首的行号  :1,20s/^    s  *[0-9]  *    s  *//g    展开全部折叠  zR    展开当前层级折叠  zr    全部折叠  zM    当前层级折叠  zm    切换折叠/展开  za    递归折叠/展开当前大区块  zA    折叠当前区块  zc    递归折叠当前大区块  zC    展开当前区块  zo    递归展开当前大区块  zO    格式化 json 数据  :%!python -m json.tool    缩进当前行  &gt;&gt;    反缩进当前行  &lt;&lt;   modeline 写法： vim: set ft=markdown: vim: ft=markdown // vim: noai:ts=4:sw=4 /* vim: noai:ts=4:sw=4 */ 插件 CtrlP 基础按键 C-p    功能  按键     刷新列表  F5    切换文件/缓冲区/MRU  C-f/b    切换全路径搜索/文件名搜索  C-d    切换正则表达式模式  C-r    上/下一个选项  C-k/j    在新标签/垂直分割/水平分割打开文件  C-t/v/x    历史选择记录的上/下一条  C-p/n    创建文件和它的父路径  C-y    标记并打开多个文件  C-z C-o    退出 CtrlP  C-c   LeaderF    功能  按键     打开文件  Leader-f    打开缓冲区  Leader-b    打开 MRU  Leader-m（自定义的）    退出  C-c    切换模糊查找和正则查找  C-r    粘贴  C-v    清空输入  C-u    上/下一个选项  C-k/j    在新标签/垂直分割/水平分割打开文件  C-t/]/v    刷新列表  F5   vim-table-mode    功能  按键     删除列  Leader-tdc    删除行  Leader-tdd    重新格式化表格  Leader-tr   markdown-preview.nvim    功能  按键     预览  F5    停止预览  F6   导出 PDF：预览以后，使用浏览器的「打印」功能，打印机选「另存为 PDF」，取消「页眉和页脚」，然后点保存即可。 命令行 打开 Vim 时跳转到指定行： vim +[num] filename num 表示行号，不填则跳转到文件末尾。 ",
+      "url"      : "http://localhost:4000/wiki/vim/",
+      "keywords" : "Vim"
+    } ,
+  
+    {
+      "title"    : "MySQL 表空间碎片回收",
+      "category" : "",
+      "content": "从 MySQL 表中大量删除数据后，有可能表占用的空间并不会马上回收掉，此时如果在意空间占用，可以主动进行空间碎片回收。 查看表空间碎片占用 方法一： SELECT table_schema db,   table_name,   data_free,   engine FROM information_schema.tables  WHERE table_schema NOT IN ('information_schema', 'mysql')  AND data_free &gt; 0 and table_name = 'xxx' ORDER BY DATA_FREE DESC; 方法二： show table status like 'xxx'; data_free 字段对应的值就是碎片字节数。 表空间碎片回收 -- 适用 InnoDB 表 ALTER TABLE xxx engine = InnoDB 有一篇相关的文章讲得比较好可以参考：https://www.cnblogs.com/wanng/p/mysql-recycle-table-space.html ",
+      "url"      : "http://localhost:4000/fragment/mysql-space-recover/",
+      "keywords" : "MySQL"
+    } ,
+  
+    {
+      "title"    : "Fragment Template",
+      "category" : "",
+      "content": "Content here ",
+      "url"      : "http://localhost:4000/fragment/template/",
+      "keywords" : "keyword1, keyword2"
+    } 
+  
+]
+
