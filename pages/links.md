@@ -8,6 +8,8 @@ menu: 链接
 permalink: /links/
 ---
 
+没有链接的博客是孤独的。
+
 > Blog搭建，由衷的感谢
 
 <ul>

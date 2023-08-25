@@ -5,9 +5,9 @@ baseurl:
 url: https://wanjinhu.github.io
 date_format: "ordinal"
 title: Wanjin Hu (胡万金)
-subtitle: "斜杠青年"
+subtitle: "思考人生，探索世界"
 description: "There is only one heroism in the world: to see the world as it is and to love it. (世界上只有一种真正的英雄主义，那就是认清生活真相后依旧热爱生活。)"
-keywords: Wanjin Hu, Blog, 斜杠青年
+keywords: Wanjin Hu, Blog
 timezone: Asia/Shanghai
 encoding: "utf-8"
 # 页面左下角显示的年份
