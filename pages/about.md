@@ -1,7 +1,7 @@
 ---
 layout: page
 title: About
-description: 斜杠青年
+description: 承担责任，追求价值，寻找人生意义。
 keywords: Wanjin Hu, 胡万金
 comments: true
 menu: 关于
