@@ -3,7 +3,7 @@ layout: post
 title: 宏基因组分析流程
 categories: [Metagenomic]
 description: 宏基因组分析流程
-keywords: Metagenomic, Microbiome
+keywords: Metagenomic, Microbiome, Sequencing
 ---
 
 提供一个宏基因组分析流程。
