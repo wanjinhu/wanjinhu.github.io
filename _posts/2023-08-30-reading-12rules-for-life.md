@@ -1,9 +1,9 @@
 ---
 layout: post
 title: 《人生十二法则》读后的个人思考
-categories: [Life]
+categories: [人生意义]
 description: 《人生十二法则》读后的个人思考
-keywords: 人生意义, 阅读, Life
+keywords: 人生意义, 阅读
 ---
 
 真的有12条法则可以来指导你过的人生么？我开始思考自己的人生。

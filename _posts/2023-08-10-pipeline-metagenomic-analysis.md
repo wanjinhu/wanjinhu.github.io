@@ -1,9 +1,9 @@
 ---
 layout: post
 title: 宏基因组分析流程
-categories: [Metagenomic]
+categories: [临床数据分析]
 description: 宏基因组分析流程
-keywords: Metagenomic, Microbiome, Sequencing
+keywords: 宏基因组, 临床数据分析
 ---
 
 提供一个宏基因组分析流程。
