@@ -8,11 +8,9 @@ menu: 关于
 permalink: /about/
 ---
 
-My name is Wanjin Hu (胡万金) and I am currently working as researcher at DiPRO MIM (Laboratory of Microbiology, Immunology, and Metabolism) (迪辅乐微生物免疫代谢实验室), which is about research in offering microecological health solutions. I used to work at Majorbio (上海美吉生物医药科技有限公司) as a bioinformatics engineer, focus on the development of bioinformatics technology in microbial research, such as metagenomics, bacterial genomics and prokaryotic transcriptomics, etc.
+My name is Wanjin Hu (胡万金) and I am currently working as a researcher at Dipro MIM, and my research direction is the relationship between human health and microorganisms, especially focusing on the microorganisms in the gut. I used to work at Majorbio as a bioinformatics engineer, focus on the development of bioinformatics technology in microbial research, such as metagenomics, bacterial genomics and prokaryotic transcriptomics, etc.
 
-上面是一个稍微官方的简介，是和工作相关的。
-
-其实我是一个存在主义者，喜欢思考人生，喜欢思考世界，喜欢思考未来。
+我是一个存在主义者，喜欢思考人生，喜欢思考世界，喜欢思考未来。
 
 如有任何问题可以联系我，或者在下面留言。
 
