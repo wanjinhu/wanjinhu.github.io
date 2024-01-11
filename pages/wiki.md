@@ -2,14 +2,14 @@
 layout: wiki
 title: Wiki
 description: 个人的维基百科
-keywords: 维基, Wiki
+keywords: 维基，Wiki
 comments: false
 copyright: false
 menu: 维基
 permalink: /wiki/
 ---
 
-> 简单的命令，但是又常用。
+> 简单常用的命令，以及平时遇到的小问题记录。
 
 {% case site.components.wiki.view %}
 
