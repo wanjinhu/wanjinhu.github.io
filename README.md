@@ -9,6 +9,7 @@
 3. [利用细菌全基因组测序方式对菌株安全性评价](https://wanjinhu.github.io/2023/09/14/pipeline-bacterial-genome/)
 4. [QIIME2 构建数据库以及常规分析流程](https://wanjinhu.github.io/2023/10/27/pipeline-qiime2-analysis/)
 5. [阿里云服务器 mysql 数据库为什么用 DBeaver 等软件远程连接不上？](https://wanjinhu.github.io/2024/01/11/issue-aliyun-mysql/)
+6. [【数据分析】一套适合初学者的宏基因组数据分析过程的讲解](https://wanjinhu.github.io/2024/02/18/article-metagenomic/)
 
 ## 更新的 wiki (常用命令)
 
