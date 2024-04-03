@@ -1,0 +1,681 @@
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.3">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" /><updated>2024-01-11T17:18:04+08:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Wanjin Hu (胡万金)</title><subtitle>There is only one heroism in the world: to see the world as it is and to love it. (世界上只有一种真正的英雄主义，那就是认清生活真相后依旧热爱生活。)</subtitle><author><name>Wanjin Hu (胡万金)</name></author><entry><title type="html">阿里云服务器 mysql 数据库为什么用 DBeaver 等软件远程连接不上？</title><link href="http://localhost:4000/2024/01/11/issue-aliyun-mysql/" rel="alternate" type="text/html" title="阿里云服务器 mysql 数据库为什么用 DBeaver 等软件远程连接不上？" /><published>2024-01-11T00:00:00+08:00</published><updated>2024-01-11T00:00:00+08:00</updated><id>http://localhost:4000/2024/01/11/issue-aliyun-mysql</id><content type="html" xml:base="http://localhost:4000/2024/01/11/issue-aliyun-mysql/">&lt;p&gt;解决 DBeaver 远程连接阿里云 MySQL 数据库时出现“无法连接到数据库”、“时间超时”等问题。&lt;/p&gt;
+
+&lt;p&gt;这里解决的具体问题是，在 host、端口、用户、密码等信息设置正确的时候，DBeaver 连接的时候会报错“Communications link failure  The last packet sent successfully to the server was 0 milliseconds ago. The driver has not received any packets from the server.   Can not read response from server. Expected to read 4 bytes, read 0 bytes before connectio”这样的信息。&lt;/p&gt;
+
+&lt;p&gt;查了很多博主的答案，大家都聚焦在 mysql 超时的问题，类似让修改 my.cnf 文件，增加 wait_timeout=31536000 这样的配置，也就是增加了连接超时时间。我按照这样的方法去尝试之后发现是行不通的，前前后后折腾了一会儿。由于自己薄弱的计算机网络知识。只能采取对比法排除，现在出问题的服务器是新开的，之前旧的服务器是能够正常连接的，所以对比了两个服务器的配置，发现新开的服务器的配置和旧的服务器配置是一模一样的，但是新开的服务器就是无法连接，而旧的服务器却可以正常连接。&lt;/p&gt;
+
+&lt;p&gt;最后发现是阿里云的安全组的问题。&lt;/p&gt;
+
+&lt;p&gt;首先，阿里云的安全组是默认关闭的，需要手动添加开启。&lt;/p&gt;
+
+&lt;p&gt;其次，阿里云的安全组默认只开两个端口，也就是 SSH 的 22 和 RDP 的 3389。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/blog/01_just_ssh_rdp.png&quot; alt=&quot;ssh and rdp&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;mysql 的端口默认是 3306，在你新开阿里云服务器后，mysql 的 3306 端口并没有开启，需要手动开启。&lt;/p&gt;
+
+&lt;p&gt;&lt;img src=&quot;/images/blog/02_mysql_port.png&quot; alt=&quot;mysql port&quot; /&gt;&lt;/p&gt;
+
+&lt;p&gt;阿里云的安全组需要手动添加规则，添加规则的目的是允许从指定的 IP 地址访问指定的端口。阿里云服务器开放端口给 IP 使用，可以参考阿里云的官方文档：&lt;a href=&quot;https://developer.aliyun.com/article/793961&quot;&gt;阿里云服务器开放全部端口给所有 IP 使用教程&lt;/a&gt;&lt;/p&gt;
+
+&lt;p&gt;在添加了 mysql 的端口后，DBeaver 就可以正常连接了。&lt;/p&gt;
+
+&lt;p&gt;由于自己薄弱的计算机网络知识，导致浪费了很多时间，不过最终找到了问题所在，也在这里记录一下，以备后用。&lt;/p&gt;</content><author><name>Wanjin Hu (胡万金)</name></author><category term="数据库" /><summary type="html">解决 DBeaver 远程连接阿里云 MySQL 数据库时出现“无法连接到数据库”、“时间超时”等问题。</summary></entry><entry><title type="html">QIIME2 构建数据库以及常规分析流程</title><link href="http://localhost:4000/2023/10/27/pipeline-qiime2-analysis/" rel="alternate" type="text/html" title="QIIME2 构建数据库以及常规分析流程" /><published>2023-10-27T00:00:00+08:00</published><updated>2023-10-27T00:00:00+08:00</updated><id>http://localhost:4000/2023/10/27/pipeline-qiime2-analysis</id><content type="html" xml:base="http://localhost:4000/2023/10/27/pipeline-qiime2-analysis/">&lt;p&gt;QIIME2 分析流程是扩增子分析常用的流程之一，这里提供一个完整的 16S 数据分析流程，包括构建数据库以及常规分析。QIIME2 是各种插件组成的综合体 pipeline，具体的信息可以看官方网站 &lt;a href=&quot;https://docs.qiime2.org/2023.9/&quot;&gt;QIIME2&lt;/a&gt;.&lt;/p&gt;
+
+&lt;p&gt;构建数据库的过程，参考：&lt;a href=&quot;https://forum.qiime2.org/t/processing-filtering-and-evaluating-the-silva-database-and-other-reference-sequence-data-with-rescript/15494&quot;&gt;Processing, filtering, and evaluating the SILVA database with RESCRIPt&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;下载-silva-数据库&quot;&gt;下载 SILVA 数据库&lt;/h2&gt;
+
+&lt;p&gt;在 &lt;a href=&quot;https://www.arb-silva.de/no_cache/download/archive/release_138.1/Exports/&quot;&gt;SILVA&lt;/a&gt; 数据库下载并解压如下文件：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;tax_slv_ssu_138.1.txt&lt;/li&gt;
+  &lt;li&gt;taxmap_slv_ssu_ref_nr_138.1.txt&lt;/li&gt;
+  &lt;li&gt;tax_slv_ssu_138.1.tre&lt;/li&gt;
+  &lt;li&gt;SILVA_138.1_SSURef_NR99_tax_silva_trunc.fasta&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;初步构建-qiime2-物种分类数据库&quot;&gt;初步构建 QIIME2 物种分类数据库&lt;/h2&gt;
+
+&lt;p&gt;Import the Taxonomy Rank file&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;qiime tools import &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--type&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;FeatureData[SILVATaxonomy]&apos;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--input-path&lt;/span&gt; tax_slv_ssu_138.1.txt &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--output-path&lt;/span&gt; taxranks-silva-138.1-ssu-nr99.qza
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Import the Taxonomy Mapping file&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;qiime tools import &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--type&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;FeatureData[SILVATaxidMap]&apos;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--input-path&lt;/span&gt; taxmap_slv_ssu_ref_nr_138.1.txt &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--output-path&lt;/span&gt; taxmap-silva-138.1-ssu-nr99.qza
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Import the Taxonomy Hierarchy Tree file&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;qiime tools import &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--type&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;Phylogeny[Rooted]&apos;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--input-path&lt;/span&gt; tax_slv_ssu_138.1.tre &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--output-path&lt;/span&gt; taxtree-silva-138.1-nr99.qza
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Import the sequence file&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;qiime tools import &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--type&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;FeatureData[RNASequence]&apos;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--input-path&lt;/span&gt; SILVA_138.1_SSURef_NR99_tax_silva_trunc.fasta &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--output-path&lt;/span&gt; silva-138.1-ssu-nr99-rna-seqs.qza
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;转换 FeatureData[RNASequence] 为 FeatureData[DNASequence]，获得物种序列&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;qiime rescript reverse-transcribe &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--i-rna-sequences&lt;/span&gt; silva-138.1-ssu-nr99-rna-seqs.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--o-dna-sequences&lt;/span&gt; silva-138.1-ssu-nr99-seqs.qza
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;使用 qiime2 的 silva 分类法创建物种标签分类&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;qiime rescript parse-silva-taxonomy &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--i-taxonomy-tree&lt;/span&gt; taxtree-silva-138.1-nr99.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--i-taxonomy-map&lt;/span&gt; taxmap-silva-138.1-ssu-nr99.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--i-taxonomy-ranks&lt;/span&gt; taxranks-silva-138.1-ssu-nr99.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--o-taxonomy&lt;/span&gt; silva-138.1-ssu-nr99-tax.qza
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;——————————————- Optional (可选的) ——————————————-&lt;/p&gt;
+
+&lt;p&gt;也可以直接下载别人构建好的数据库来使用&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;qiime rescript get-silva-data &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--p-version&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;138.1&apos;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--p-target&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;SSURef_NR99&apos;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--o-silva-sequences&lt;/span&gt; silva-138.1-ssu-nr99-rna-seqs.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--o-silva-taxonomy&lt;/span&gt; silva-138.1-ssu-nr99-tax.qza
+
+qiime rescript reverse-transcribe &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--i-rna-sequences&lt;/span&gt; silva-138.1-ssu-nr99-rna-seqs.qza
+    &lt;span class=&quot;nt&quot;&gt;--o-dna-sequences&lt;/span&gt; silva-138.1-ssu-nr99-seqs.qza
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;——————————————- Optional (可选的) ——————————————-&lt;/p&gt;
+
+&lt;h2 id=&quot;对初步数据库进行质控&quot;&gt;对初步数据库进行质控&lt;/h2&gt;
+
+&lt;p&gt;删除有 5 个以上模糊碱基的序列，8 个碱基以上的同聚物（Homopolymer 是指基因组上单一碱基重复的区域）&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;# 这里用的是默认参数&lt;/span&gt;
+qiime rescript cull-seqs &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--i-sequences&lt;/span&gt; silva-138.1-ssu-nr99-seqs.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--o-clean-sequences&lt;/span&gt; silva-138.1-ssu-nr99-seqs-cleaned.qza
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;通过序列长度和物种分类信息过滤数据库中的序列，具体地，Archaea (16S) &amp;gt;= 900 bp, Bacteria (16S) &amp;gt;= 1200 bp, and any Eukaryota (18S) &amp;gt;= 1400 bp.&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;qiime rescript filter-seqs-length-by-taxon &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--i-sequences&lt;/span&gt; silva-138.1-ssu-nr99-seqs-cleaned.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--i-taxonomy&lt;/span&gt; silva-138.1-ssu-nr99-tax.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--p-labels&lt;/span&gt; Archaea Bacteria Eukaryota &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--p-min-lens&lt;/span&gt; 900 1200 1400 &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--o-filtered-seqs&lt;/span&gt; silva-138.1-ssu-nr99-seqs-filt.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--o-discarded-seqs&lt;/span&gt; silva-138.1-ssu-nr99-seqs-discard.qza
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;去除重复冗余的序列&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;qiime rescript dereplicate &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--i-sequences&lt;/span&gt; silva-138.1-ssu-nr99-seqs-filt.qza  &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--i-taxa&lt;/span&gt; silva-138.1-ssu-nr99-tax.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--p-mode&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;uniq&apos;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--o-dereplicated-sequences&lt;/span&gt; silva-138.1-ssu-nr99-seqs-derep-uniq.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--o-dereplicated-taxa&lt;/span&gt; silva-138.1-ssu-nr99-tax-derep-uniq.qza
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;构建物种分类器&quot;&gt;构建物种分类器&lt;/h2&gt;
+
+&lt;p&gt;经过上述处理后，构建 bayes 物种分类器，当然也有其他算法的分类器，可以看 QIIME2 官网，这里的分类器基于的 silva 数据库中 16S 全长序列（部分可能不是）。输出的 silva-138.1-ssu-nr99-classifier.qza 是后续分析可以用到的。&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;qiime feature-classifier fit-classifier-naive-bayes &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;--i-reference-reads&lt;/span&gt;  silva-138.1-ssu-nr99-seqs-derep-uniq.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;--i-reference-taxonomy&lt;/span&gt; silva-138.1-ssu-nr99-tax-derep-uniq.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;--o-classifier&lt;/span&gt; silva-138.1-ssu-nr99-classifier.qza
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;——————————————- Optional (可选的) ——————————————-&lt;/p&gt;
+
+&lt;p&gt;上述步骤基于的是 16S 全长数据库，可以基于测序区间不同，来构建所需要引物区间的物种分类器，比如 515f-806r&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;qiime feature-classifier extract-reads &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--i-sequences&lt;/span&gt; silva-138.1-ssu-nr99-seqs-derep-uniq.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--p-f-primer&lt;/span&gt; GTGYCAGCMGCCGCGGTAA &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--p-r-primer&lt;/span&gt; GGACTACNVGGGTWTCTAAT &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--p-n-jobs&lt;/span&gt; 2 &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--p-read-orientation&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;forward&apos;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--o-reads&lt;/span&gt; silva-138.1-ssu-nr99-seqs-515f-806r.qza
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;在构建所需引物区间后还会再进行去重，固定引物区间后还会有可能有重复的&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;qiime rescript dereplicate &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--i-sequences&lt;/span&gt; silva-138.1-ssu-nr99-seqs-515f-806r.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--i-taxa&lt;/span&gt; silva-138.1-ssu-nr99-tax-derep-uniq.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--p-mode&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;uniq&apos;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--o-dereplicated-sequences&lt;/span&gt; silva-138.1-ssu-nr99-seqs-515f-806r-uniq.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--o-dereplicated-taxa&lt;/span&gt;  silva-138.1-ssu-nr99-tax-515f-806r-derep-uniq.qza
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;在上述基础上，构建最终的 515f-806r 分类器&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;qiime feature-classifier fit-classifier-naive-bayes &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--i-reference-reads&lt;/span&gt; silva-138.1-ssu-nr99-seqs-515f-806r-uniq.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--i-reference-taxonomy&lt;/span&gt; silva-138.1-ssu-nr99-tax-515f-806r-derep-uniq.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--o-classifier&lt;/span&gt; silva-138.1-ssu-nr99-515f-806r-classifier.qza
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;——————————————- Optional (可选的) ——————————————-&lt;/p&gt;
+
+&lt;h2 id=&quot;数据分析过程&quot;&gt;数据分析过程&lt;/h2&gt;
+
+&lt;p&gt;分析前需要表明的是：扩增子数据测序方式和类型有多种，例如 pair-end 双端测序、single-end 单端测序、单一区间测序、16S 全长测序等等，以及测序公司给你返回的原始数据中包不包含引物序列等等，这都需要根据自己的测序数据来具体分析。&lt;/p&gt;
+
+&lt;p&gt;这里提供的分析过程是最常见的一种，双端测序、测序公司去除了引物序列并进行了质控、过程只包括从 fq 数据到 ASV table，物种注释结果以及 ASV 序列。我想后续的分析内容无非是根据自己的实验分组情况，在不同物种分类水平做差异分析。&lt;/p&gt;
+
+&lt;p&gt;制作样本序列信息表 (例如名为 manifest.tsv)，3 列信息分别是样本名称和两端测序数据的路径，形式如下：&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sample-id       forward-absolute-filepath       reverse-absolute-filepath
+SRR12466539     /root/pipe_script/qiime2/test/SRR12466539/SRR12466539_1.fastq.gz        /root/pipe_script/qiime2/test/SRR12466539/SRR12466539_2.fastq.gz
+SRR12466540     /root/pipe_script/qiime2/test/SRR12466540/SRR12466540_1.fastq.gz        /root/pipe_script/qiime2/test/SRR12466540/SRR12466540_2.fastq.gz
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;将上一步数据读取&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;qiime tools import &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--type&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;SampleData[PairedEndSequencesWithQuality]&apos;&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--input-path&lt;/span&gt; /root/pipe_script/qiime2/test/manifest.tsv &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--output-path&lt;/span&gt; result/paired-end-demux.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--input-format&lt;/span&gt; PairedEndFastqManifestPhred33V2
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;数据质量 summary 可视化&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;qiime demux summarize &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--i-data&lt;/span&gt; result/paired-end-demux.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--o-visualization&lt;/span&gt; result/paired-end-demux-summary.qzv
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;利用 dada2 进行 denoise，我这里使用的是质控好的数据，所以几个质控参数设置的都是 0，即不对序列做处理，也就意味着用 denoise-single 和 denoise-paired 都没问题。&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;# --o-representative-sequences 输出的代表序列&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# --o-table 输出的 ASV table&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# --o-denoising-stats 输出的 denoise 统计信息&lt;/span&gt;
+qiime dada2 denoise-single &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--i-demultiplexed-seqs&lt;/span&gt; result/paired-end-demux.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--p-trim-left&lt;/span&gt; 0 &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--p-trunc-len&lt;/span&gt; 0 &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--p-n-threads&lt;/span&gt; 8 &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--o-representative-sequences&lt;/span&gt; result/rep-seqs-dada2.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--o-table&lt;/span&gt; result/table-dada2.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--o-denoising-stats&lt;/span&gt; result/stats-dada2.qza
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;对 denoise 后的数据进行 summary 可视化&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;qiime feature-table summarize &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--i-table&lt;/span&gt; result/table-dada2.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--o-visualization&lt;/span&gt; result/table-dada2.qzv
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;利用 bayes 方法做物种注释&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;# --o-classification 物种分类结果&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# --i-classifier 就是上面构建好的物种分类器&lt;/span&gt;
+qiime feature-classifier classify-sklearn &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--i-classifier&lt;/span&gt; /root/database/SILVA_138.1_SSURef_NR99/silva-138.1-ssu-nr99-classifier.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--i-reads&lt;/span&gt; result/rep-seqs-dada2.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--o-classification&lt;/span&gt; result/taxonomy-dada2-sliva.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--p-n-jobs&lt;/span&gt; 3 &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--verbose&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;对上述 qza 结果转换输出为 tsv，fasta 格式文件。&lt;/p&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;# 输出统计信息表&lt;/span&gt;
+qiime tools &lt;span class=&quot;nb&quot;&gt;export&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--input-path&lt;/span&gt;  result/stats-dada2.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--output-path&lt;/span&gt; result/   &lt;span class=&quot;c&quot;&gt;# default out file: stats.tsv&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# 输出代表序列&lt;/span&gt;
+qiime tools &lt;span class=&quot;nb&quot;&gt;export&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--input-path&lt;/span&gt;  result/rep-seqs-dada2.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--output-path&lt;/span&gt; result/   &lt;span class=&quot;c&quot;&gt;# default out file: dna-sequences.fasta&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# 输出biom格式的ASV table&lt;/span&gt;
+qiime tools &lt;span class=&quot;nb&quot;&gt;export&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--input-path&lt;/span&gt;  result/table-dada2.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--output-path&lt;/span&gt; result/   &lt;span class=&quot;c&quot;&gt;# default out file: feature-table.biom&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# 输出物种分类结果&lt;/span&gt;
+qiime tools &lt;span class=&quot;nb&quot;&gt;export&lt;/span&gt; &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--input-path&lt;/span&gt;  result/taxonomy-dada2-sliva.qza &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+    &lt;span class=&quot;nt&quot;&gt;--output-path&lt;/span&gt; result/  &lt;span class=&quot;c&quot;&gt;# default out file: taxonomy.tsv&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# 转换biom格式为tsv格式&lt;/span&gt;
+biom convert &lt;span class=&quot;nt&quot;&gt;-i&lt;/span&gt; feature-table.biom &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; feature-table.tsv &lt;span class=&quot;nt&quot;&gt;--to-tsv&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;经过上述步骤就得到了扩增子分析中重要的几个结果了，ASV table、ASV 序列和物种注释结果。后续的相关分析就是基于这几个结果去做。&lt;/p&gt;</content><author><name>Wanjin Hu (胡万金)</name></author><category term="测序数据分析" /><summary type="html">QIIME2 分析流程是扩增子分析常用的流程之一，这里提供一个完整的 16S 数据分析流程，包括构建数据库以及常规分析。QIIME2 是各种插件组成的综合体 pipeline，具体的信息可以看官方网站 QIIME2.</summary></entry><entry><title type="html">利用细菌全基因组测序方式对菌株安全性评价</title><link href="http://localhost:4000/2023/09/14/pipeline-bacterial-genome/" rel="alternate" type="text/html" title="利用细菌全基因组测序方式对菌株安全性评价" /><published>2023-09-14T00:00:00+08:00</published><updated>2023-09-14T00:00:00+08:00</updated><id>http://localhost:4000/2023/09/14/pipeline-bacterial-genome</id><content type="html" xml:base="http://localhost:4000/2023/09/14/pipeline-bacterial-genome/">&lt;p&gt;如何利用全基因组测序方式来评估菌株的安全性？这里主要指抗生素耐药性和毒力因子，以及涉及到的可移动元件。&lt;/p&gt;
+
+&lt;h2 id=&quot;背景和前提说明&quot;&gt;背景和前提说明&lt;/h2&gt;
+&lt;p&gt;2023年2月13日，国家卫生健康委员会发布了《食品安全国家标准 食品用菌种安全性评价程序》（征求意见稿）。文件你可以点击 &lt;a href=&quot;images/blog/食品安全国家标准-食品用菌种安全性评价程序.pdf&quot;&gt;这个链接&lt;/a&gt; 进行下载。&lt;/p&gt;
+
+&lt;p&gt;标准规定了食品用菌种（包括细菌、丝状真菌、酵母、放线菌及单细胞藻类）的安全性评价程序。具体评价方法包括了相关文献综述，全基因组测序，动物致病性试验，耐药性试验，产毒试验和其他的活性代谢产物试验等。应该说评价的内容比较全面，我这里给大家介绍的内容是关于细菌的全基因组测序内容。&lt;/p&gt;
+
+&lt;p&gt;这份标准对全基因组测序相关的内容有具体的要求，最主要的是评估菌株基因组序列中可能存在的毒力因子和抗生素耐药性基因，方法就是尽可能的与已知的相关数据库进行比对。标准如下：&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;序列长度覆盖度≥60%，输入序列与数据库中序列的匹配度（≥ 85 %）和 e 值（≤1e5 ）&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;文件中虽然没有具体指明比对的软件，上面这3个参数可以利用常见的blast和diamond比对软件获得。&lt;/p&gt;
+
+&lt;p&gt;这份标准中提到了具体的数据库，例如毒力基因（或毒素合成关键基因）数据库（包括但不限于 VFDB、PAI DB、MvirDB、CGE 等），耐药基因数据库（包括但不限于CARD、ResFinder、Argannot、NDARO 等）。但是有些数据库多年不更新，不提供基因序列或者只能利用在线比对的方式等，这些数据库就暂时不考虑。原则上就是尽可能的找到毒力和耐药性基因的参考数据库，然后利用比对软件比对，获得比对结果。&lt;/p&gt;
+
+&lt;h2 id=&quot;参考数据库说明&quot;&gt;参考数据库说明&lt;/h2&gt;
+&lt;p&gt;我这里一共找到12个数据库作为参考，7个抗生素耐药性，3个毒力基因，1个可移动元件和1个原噬菌体。&lt;/p&gt;
+
+&lt;p&gt;相同类型数据库中有的基因是重复的，在实际的分析中也体现出来了。同一个基因在不同数据库中记录的信息详细度也是有区别的，但依旧是同一个基因。&lt;/p&gt;
+
+&lt;p&gt;实际分析后，比较有效的数据库，抗生素耐药性基因数据库以CARD和MEGARes为代表，毒力因子数据库以VFDB为代表。以下是具体的数据库信息，&lt;/p&gt;
+
+&lt;h3 id=&quot;抗生素耐药性数据库&quot;&gt;抗生素耐药性数据库&lt;/h3&gt;
+&lt;ol&gt;
+  &lt;li&gt;&lt;a href=&quot;https://card.mcmaster.ca/home&quot;&gt;CARD&lt;/a&gt; : 抗生素耐药性&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;http://genepi.food.dtu.dk/resfinder&quot;&gt;Resfinder&lt;/a&gt; : 抗生素耐药性&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://www.ncbi.nlm.nih.gov/bioproject/PRJNA313047&quot;&gt;NCBI_ARM&lt;/a&gt; : NCBI整理的抗生素耐药性数据库&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;http://bacmet.biomedicine.gu.se/download_temporary.html&quot;&gt;Bacmet2&lt;/a&gt; : 抗生素耐药性&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://www.mediterranee-infection.com/acces-ressources/base-de-donnees/arg-annot-2/&quot;&gt;ARG_ANNOT&lt;/a&gt; : 抗生素耐药性&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://db.meglab.org/&quot;&gt;MEGARes&lt;/a&gt; : 抗生素耐药性&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://bitbucket.org/genomicepidemiology/disinfinder_db/src/master/&quot;&gt;Disinfinder&lt;/a&gt; : 消毒剂抗性基因&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&quot;毒力基因数据库&quot;&gt;毒力基因数据库&lt;/h3&gt;
+&lt;ol&gt;
+  &lt;li&gt;&lt;a href=&quot;http://www.mgc.ac.cn/VFs/main.htm&quot;&gt;VFDB&lt;/a&gt; : 毒力因子&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://bitbucket.org/genomicepidemiology/virulencefinder_db/src/master/&quot;&gt;Virulencefinder&lt;/a&gt; : 毒力因子&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/aleimba/ecoli_VF_collection&quot;&gt;Ecoli_VF&lt;/a&gt; : 来源于大肠杆菌的毒力因子&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&quot;可移动元件数据库&quot;&gt;可移动元件数据库&lt;/h3&gt;
+&lt;ol&gt;
+  &lt;li&gt;&lt;a href=&quot;https://mobileogdb.flsi.cloud.vt.edu/&quot;&gt;mobileOG-db&lt;/a&gt; : 可移动元件/转录调控因子数据库&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&quot;原噬菌体&quot;&gt;原噬菌体&lt;/h3&gt;
+&lt;ol&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/bobeobibo/phigaro&quot;&gt;Phigaro&lt;/a&gt; : 某些温和的噬菌体侵染细菌后，其核酸整合到宿主细菌染色体中的状态&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h2 id=&quot;使用到的软件&quot;&gt;使用到的软件&lt;/h2&gt;
+&lt;ol&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/rrwick/Unicycler&quot;&gt;Unicycler&lt;/a&gt; : 是我用过&lt;strong&gt;细菌基因组&lt;/strong&gt;组装软件中最好的，不论是只有二代测序的基因组扫描图，还是二代+三代测序的基因组完成图。我之前测试过十几款细菌基因组组装软件，可以点击 &lt;a href=&quot;https://github.com/wanjinhu/Microbial-genome&quot;&gt;Microbial-genome&lt;/a&gt; 查看相关信息。&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://ecogenomics.github.io/GTDBTk/index.html&quot;&gt;GTDBtk&lt;/a&gt; : 是根据基因组分类数据库，用来对细菌基因组鉴定物种信息的，我认为是目前基于基因组鉴定物种最好的方法，适用于单菌和宏基因组MAG水平。&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/ncbi/pgap&quot;&gt;PGAP&lt;/a&gt; : 是NCBI提供的原核生物基因组注释pipeline，比如Bb-12菌株在NCBI上的信息，可以点击 &lt;a href=&quot;https://www.ncbi.nlm.nih.gov/datasets/genome/GCF_000025245.2/&quot;&gt;这个链接&lt;/a&gt; 查看，PGAP的注释结果可以作为参考。&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/tseemann/prokka&quot;&gt;Prokka&lt;/a&gt; : 可以用来快速注释细菌、古菌和病毒基因组，并且可以生成符合标准的输出文件（比如gff3和gbk等）。&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/arpcard/rgi&quot;&gt;CARD-RGI&lt;/a&gt; : 根据同源性（homology）和SNP模型从蛋白质或者核苷酸数据中预测抗生素抗性基因，是利用CARD作为参考数据库的。&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&amp;amp;PAGE_TYPE=BlastHomeNew&quot;&gt;BLAST&lt;/a&gt; : 对于只提供了核苷酸的数据库，利用BLAST来比对。&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://github.com/bbuchfink/diamond&quot;&gt;DIAMOND&lt;/a&gt; : 提供了蛋白的数据库，利用DIAMOND来比对。&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://proksee.ca/&quot;&gt;Proksee&lt;/a&gt; : 基因组分析集合的在线分析网站。这里我用它来绘制基因组圈图，其实网站本身提供了丰富的基因组分析的方法，一般的分析都可以直接进行。&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h2 id=&quot;分析评估流程&quot;&gt;分析评估流程&lt;/h2&gt;
+&lt;p&gt;整个分析流程并不复杂，主要是前期对数据库的整理，特别是对数据库的注释文件的检查和包含注释的信息的熟悉，选择你需要的信息。&lt;/p&gt;
+
+&lt;p&gt;有整合在一起的pipeline包含了组装、基因预测和注释的功能，比如Bactopia，操作方便，只是功能都是固定好的。当然你也可以直接用其基因预测的结果，因为该pipeline使用到的软件也是Prokka.&lt;/p&gt;
+
+&lt;p&gt;我把具体的操作分析流程分步展示如下：&lt;/p&gt;
+
+&lt;h3 id=&quot;1-序列组装&quot;&gt;1. 序列组装&lt;/h3&gt;
+&lt;h4 id=&quot;完成图二代三代测序数据&quot;&gt;完成图：二代+三代测序数据&lt;/h4&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;# -1，-2 表示二代短读长测序的双端测序数据，-l 表示三代长读长测序数据，-o 表示输出文件夹&lt;/span&gt;
+unicycler &lt;span class=&quot;nt&quot;&gt;-1&lt;/span&gt; test_1.fq.gz &lt;span class=&quot;nt&quot;&gt;-2&lt;/span&gt; test_2.fq.gz &lt;span class=&quot;nt&quot;&gt;-l&lt;/span&gt; test_long.fq.gz &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; Assembly &lt;span class=&quot;nt&quot;&gt;-t&lt;/span&gt; 16
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;h4 id=&quot;扫描图二代测序数据&quot;&gt;扫描图：二代测序数据&lt;/h4&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;unicycler &lt;span class=&quot;nt&quot;&gt;-1&lt;/span&gt; test_1.fq.gz &lt;span class=&quot;nt&quot;&gt;-2&lt;/span&gt; test_2.fq.gz &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; Assembly &lt;span class=&quot;nt&quot;&gt;-t&lt;/span&gt; 16
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;h4 id=&quot;主要输出结果说明&quot;&gt;主要输出结果说明：&lt;/h4&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;Assembly/assembly.fasta&lt;/code&gt; 组装结果的fasta格式，下一步分析使用的&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;Assembly/assembly.gfa&lt;/code&gt; 组装结果的gfa格式，特别是对于扫描图基因组来说，多个contig的连接关系可以很清晰地看到，利用 &lt;a href=&quot;https://github.com/rrwick/Bandage&quot;&gt;Bandage&lt;/a&gt; 可以看到&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;Assembly/unicycler.log&lt;/code&gt; 组装过程日志，你可以看到unicycler在组装过程中到底做了哪些事情&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;2-基因组物种分类鉴定&quot;&gt;2. 基因组物种分类鉴定&lt;/h3&gt;
+&lt;h4 id=&quot;gtdbtk&quot;&gt;GTDBtk&lt;/h4&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;# --genome_dir 基因组存放的文件夹，--out_dir 指定输出文件夹，--prefix 指定输出文件的前缀，--extension 基因组的后缀&lt;/span&gt;
+gtdbtk classify_wf &lt;span class=&quot;nt&quot;&gt;--genome_dir&lt;/span&gt; Assembly &lt;span class=&quot;nt&quot;&gt;--out_dir&lt;/span&gt; GTDB_result &lt;span class=&quot;nt&quot;&gt;--cpus&lt;/span&gt; 16 &lt;span class=&quot;nt&quot;&gt;--prefix&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;test&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--extension&lt;/span&gt; fasta
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h4 id=&quot;gtdbtk主要输出结果说明&quot;&gt;GTDBtk主要输出结果说明：&lt;/h4&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;GTDB_result/test.bac120.summary.tsv&lt;/code&gt; 物种分类结果, 包括物种分类信息，与参考基因组的ANI相似度等具体信息&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h4 id=&quot;pgap&quot;&gt;PGAP&lt;/h4&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;# -o 表示输出文件夹，-g 表示输入的基因组，-s 表示提供的物种信息，是程序运行的必须信息，你可以利用GTDBtk运行得到的分类信息，使用的taxcheck参数会检查你提供的物种信息，如果不一致会自动纠正，--no-internet 表示不使用互联网，--no-self-update 表示不更新，--taxcheck 表示检查物种分类信息，会得到checkM的分析结果，--auto-correct-tax 表示自动纠正物种分类信息，--ignore-all-errors 表示忽略运行中的其他错误&lt;/span&gt;
+pgap.py &lt;span class=&quot;nt&quot;&gt;-r&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; PGAP_result &lt;span class=&quot;nt&quot;&gt;-g&lt;/span&gt; Assembly/assembly.fasta &lt;span class=&quot;nt&quot;&gt;-s&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;Bifidobacterium longum&apos;&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--no-internet&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--no-self-update&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--taxcheck&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--auto-correct-tax&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--ignore-all-errors&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h4 id=&quot;pgap主要输出结果说明&quot;&gt;PGAP主要输出结果说明：&lt;/h4&gt;
+&lt;ul&gt;
+  &lt;li&gt;你可以点击 &lt;a href=&quot;https://github.com/ncbi/pgap/wiki/Output-Files&quot;&gt;这个链接&lt;/a&gt; 来查看输出结果文件夹下每个文件的含义&lt;/li&gt;
+  &lt;li&gt;最重要的文件的结果是：PGAP_result/ani-tax-report.txt，是物种检查的结果，点击 &lt;a href=&quot;https://github.com/ncbi/pgap/wiki/Taxonomy-Check&quot;&gt;这个链接&lt;/a&gt; 查看详细说明&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;3-基因预测&quot;&gt;3. 基因预测&lt;/h3&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;# --outdir 输出文件夹，--prefix 输出文件的前缀，--kingdom 物种分类信息，--rfam 是否使用rfam数据库&lt;/span&gt;
+prokka &lt;span class=&quot;nt&quot;&gt;--outdir&lt;/span&gt; Prokka &lt;span class=&quot;nt&quot;&gt;--force&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--prefix&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;test&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--kingdom&lt;/span&gt; Bacteria &lt;span class=&quot;nt&quot;&gt;--rfam&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--cpus&lt;/span&gt; 16 Assembly/assembly.fasta
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h4 id=&quot;prokka输出结果说明&quot;&gt;Prokka输出结果说明：&lt;/h4&gt;
+&lt;ul&gt;
+  &lt;li&gt;prokka输出的就是基因的相关信息，比如核苷酸序列，CDS的蛋白序列，gff/gbk等基因注释文件，以及对基因统计的表格。具体的说明，点击 &lt;a href=&quot;https://github.com/tseemann/prokka#output-files&quot;&gt;这个链接&lt;/a&gt; 来查看&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;Prokka/prokka.faa&lt;/code&gt; CDS的蛋白序列&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;Prokka/prokka.ffn&lt;/code&gt; 核苷酸序列&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h3 id=&quot;4-基因注释&quot;&gt;4. 基因注释&lt;/h3&gt;
+&lt;p&gt;这里的基因注释指的是用抗生素耐药性基因数据库、毒力因子数据库和可移动元件的注释。对于rRNA、tRNA以及其他基因的注释，Prokka已经分析了，其底层利用的数据库是UniProt, Pfam和TIGRFAMs。当然Prokka还会预测到很多假定蛋白，这些基因可能是某些功能基因，注释需要用其他数据库来注释。&lt;/p&gt;
+
+&lt;h4 id=&quot;card-rgi抗生素耐药性基因注释&quot;&gt;CARD-RGI抗生素耐药性基因注释&lt;/h4&gt;
+&lt;p&gt;CARD抗生素耐药性基因注释通过RGI的方式去分析，而不是直接利用BLAST和DIAMOND的方式去分析。&lt;/p&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;# --input_sequence 输入的基因序列，--output_file 输出文件的前缀，--local 本地运行 -t 基因类型&lt;/span&gt;
+rgi main &lt;span class=&quot;nt&quot;&gt;--input_sequence&lt;/span&gt; Prokka/prokka.faa &lt;span class=&quot;nt&quot;&gt;--output_file&lt;/span&gt; Card_result &lt;span class=&quot;nt&quot;&gt;--local&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;--clean&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-t&lt;/span&gt; protein
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;h4 id=&quot;diamond比对&quot;&gt;DIAMOND比对&lt;/h4&gt;
+&lt;p&gt;如果数据库提供了蛋白序列，则利用diamond比对的方式去做，比blastp的方式要快一些。这里以VFDB毒力因子数据库为例，&lt;/p&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;# 数据库构建diamond的索引，--in 输入的需要构建索引的蛋白序列，--db 输出的索引&lt;/span&gt;
+diamond makedb &lt;span class=&quot;nt&quot;&gt;--in&lt;/span&gt; VFDB_setA_pro.fas &lt;span class=&quot;nt&quot;&gt;--db&lt;/span&gt; VFDB_setA_pro
+&lt;span class=&quot;c&quot;&gt;# 利用diamond blastp去比对，--db 数据库索引，--query 待比对的蛋白序列，--out 比对输出结果，--evalue 比对evalue阈值，--max-target-seqs 最大比对目标序列数，--outfmt 输出格式&lt;/span&gt;
+diamond blastp &lt;span class=&quot;nt&quot;&gt;--db&lt;/span&gt; VFDB_setA_pro.dmnd &lt;span class=&quot;nt&quot;&gt;--query&lt;/span&gt; Prokka/prokka.faa &lt;span class=&quot;nt&quot;&gt;--out&lt;/span&gt; vf_anno.txt &lt;span class=&quot;nt&quot;&gt;--evalue&lt;/span&gt; 0.00001 &lt;span class=&quot;nt&quot;&gt;--max-target-seqs&lt;/span&gt; 1 &lt;span class=&quot;nt&quot;&gt;--outfmt&lt;/span&gt; 6 qseqid sseqid pident length qcovhsp mismatch gapopen qstart qend sstart send evalue bitscore
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h4 id=&quot;blast比对&quot;&gt;BLAST比对&lt;/h4&gt;
+&lt;p&gt;有的数据库只提供了核苷酸序列，则用blastn比对的方式去做。这里以MEGARes耐药基因数据库为例，&lt;/p&gt;
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;# 数据库构建索引，-dbtype 数据库类型(nucl还是prot)，-in 输入的序列，-input_type 序列类型，-out 输出的索引&lt;/span&gt;
+makeblastdb &lt;span class=&quot;nt&quot;&gt;-dbtype&lt;/span&gt; nucl &lt;span class=&quot;nt&quot;&gt;-in&lt;/span&gt; megares_database_v3.00.fasta &lt;span class=&quot;nt&quot;&gt;-input_type&lt;/span&gt; fasta &lt;span class=&quot;nt&quot;&gt;-out&lt;/span&gt; megares
+&lt;span class=&quot;c&quot;&gt;# blastn比对，-query 待比对的核苷酸序列，-db 数据库索引，-out 比对输出结果，-evalue 比对evalue阈值，-max_target_seqs 最大比对目标序列数，-max_hsp 比对最大的hsp序列数，-outfmt 输出格式&lt;/span&gt;
+blastn &lt;span class=&quot;nt&quot;&gt;-query&lt;/span&gt; Prokka/prokka.ffn &lt;span class=&quot;nt&quot;&gt;-db&lt;/span&gt; megares &lt;span class=&quot;nt&quot;&gt;-out&lt;/span&gt; megares_anno.txt &lt;span class=&quot;nt&quot;&gt;-evalue&lt;/span&gt; 0.00001 &lt;span class=&quot;nt&quot;&gt;-max_target_seqs&lt;/span&gt; 1 &lt;span class=&quot;nt&quot;&gt;-max_hsps&lt;/span&gt; 1 &lt;span class=&quot;nt&quot;&gt;-outfmt&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;6 qseqid sseqid pident length qcovhsp mismatch gapopen qstart qend sstart send evalue bitscore&apos;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;5-后续其他分析&quot;&gt;5. 后续其他分析&lt;/h3&gt;
+&lt;p&gt;可移动元件分析，也是利用预测得到的基因和可移动元件数据库mobileOG-db进行比对的方式获得的，为了确定抗生素耐药性基因是不是由于水平基因转移的方式获得的，只需要看下抗生素耐药性基因编号和可移动元件的编号是不是对应的即可。具体的你可以参考&lt;a href=&quot;https://www.nature.com/articles/s41467-022-29096-9&quot;&gt;这篇文章&lt;/a&gt;。&lt;/p&gt;
+
+&lt;p&gt;做完基因注释就得到了主要的分析结果了。为了后续便于查询和可视化的操作，后续我利用Proksee来绘制基因组圈图，并用Rmd的方式得到一个html形式的报告。&lt;/p&gt;</content><author><name>Wanjin Hu (胡万金)</name></author><category term="临床数据分析" /><summary type="html">如何利用全基因组测序方式来评估菌株的安全性？这里主要指抗生素耐药性和毒力因子，以及涉及到的可移动元件。</summary></entry><entry><title type="html">《人生十二法则》读后的个人思考</title><link href="http://localhost:4000/2023/08/30/reading-12rules-for-life/" rel="alternate" type="text/html" title="《人生十二法则》读后的个人思考" /><published>2023-08-30T00:00:00+08:00</published><updated>2023-08-30T00:00:00+08:00</updated><id>http://localhost:4000/2023/08/30/reading-12rules-for-life</id><content type="html" xml:base="http://localhost:4000/2023/08/30/reading-12rules-for-life/">&lt;p&gt;真的有12条法则可以来指导你过的人生么？我开始思考自己的人生。&lt;/p&gt;
+
+&lt;p&gt;看到书名，你估计可能会想这本书就是一个特傻的鸡汤文，这都什么年代了还搞这一出？这个时代提倡的是个性，是包容，是多元，是自由，是独立，是开放，是博爱。真就掌握了你说的这12条法则就能过好我的人生么？用脚趾头想想都觉得不可能，你了解我是谁么？你知道我经历了什么？你知道我最近有多痛苦么？没人可以定义我的人生，我的人生只能我自己来定义。我有我自己的想法和选择，我和其他人并不一样。所以我压根就懒得听你扯这些大道理，该懂得道理我都懂，我只是做不到。&lt;/p&gt;
+
+&lt;p&gt;以上这些想法多少在你的脑海中有过，再加上现在互联网的高度发达，各种社交媒体的包装，还有各种现实问题的困扰，你很难不陷入到这种思维中。平时生活工作总会带着面具，虚伪的对外界展示自己，到了深夜再进行人生思考，各种emo的情绪就会爆发，再影响第二天自己的生活，循环往复。说实话，没有人会不去思考自己的人生，人生存在的目的价值，但是正如上面提到的那些，执拗的去秉持自己的观点，而这些观点甚至不是自己思考获得的，而是各种形式主义灌输给我们的。这样的思考只会让人抑郁和空虚。&lt;/p&gt;
+
+&lt;p&gt;人在年轻的时候，既缺乏独立也缺少认知，因为还没来得及积累阅历和智慧来建立起自己的个人标准，所以大多数情况下，只好和他人做比较。大体上，我想人生的成长过程中总会经历这个阶段。如果你不想和他人做比较，就得逐渐建立起自己的标准，有明确的世界观、人生观和价值观。否则一句“我只想做自己，不想和他人比较”之类的话，就是很可笑和没有份量的，可能只是自己逃避的借口。到底这种听起来很酷的自我宣言属于哪一种，恐怕只有自己内心深处明白。我希望不要自欺欺人，至少对自己做到真诚。向内求，不是欺骗自己的空话和逃避的借口，而是符合自我标准的真情实感，这也不是平白无故就可以想明白的，去读书/学习/总结，至少对现在的我来说是一个很好的向求内的路径。&lt;/p&gt;
+
+&lt;p&gt;《人生十二法则》是乔丹•皮得森 (Jordan B. Peterson) 教授很早之前写的一本书。了解到皮得森教授是因为他之前的一个访谈类节目的片段（视频链接我会放在最后），他聊到的是一个人在面对撒谎和讲出事实的选择时，为什么要勇敢的讲真话。逃避或者说出真相，不仅仅是两个不同的选择，更是两条人生道路，两种完全不同的存在方式。我需要指出的是，这里讲出事实，不是让你不顾及任何后果的说出真相，而是要明白真相，并做出正确的选择。遇到争议不要害怕讲出自己的观点，依照事实原则，遵循内心的价值观，勇敢表明自己的观点，很有可能你会遭到批判和冷嘲热讽，但是没关系，你每一次的行为就是为塑造你个人价值观的一次巩固。这本书是我探索人生意义上的一本很重要的书，某些时候内心的那种澎湃感，由于自己匮乏的认知和语言能力很难表达出来，看到这本书的时候，我似乎找到了一种表达自己内心想法的途径，书里的某些观点与我的价值观不谋而合，让我觉得自己的价值观是正确的，同时我也可以用这些观点来指导自己，让自己变得更好。&lt;/p&gt;
+
+&lt;p&gt;《人生十二法则》的写法很有趣，每条法则都用一个小故事作为引言，也很符合皮得森教授的风格，他本身也是大学的心理学教授(不知道现在还在不在职)，他从几年前就开始在网络上发自己的上课视频，他很擅长用古希腊的神话故事或者其他的故事来引导听众。同时他一直在用严肃认真的态度来对待每个抛给他的问题，我非常欣赏皮得森教授的这种做法，现在这个时代，大家鼓吹的是个性、幽默和个人魅力塑造，以及其他各种无意义和浮于表面的词语，而皮得森教授则用严肃的态度来引导大家思考人生，我觉得这是很有必要的。他的态度和行为都让人感觉很值得学习。&lt;/p&gt;
+
+&lt;p&gt;下面是皮得森教授在书中总结的十二条人生法则：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;法则一 获胜的龙虾从不低头：笔直站立，昂首挺胸&lt;/li&gt;
+  &lt;li&gt;法则二 像照顾生病的宠物一样关心自己：待己如助人&lt;/li&gt;
+  &lt;li&gt;法则三 摆脱损友：与真心希望你好的人做朋友&lt;/li&gt;
+  &lt;li&gt;法则四 战胜内心的批评家：和昨天的自己比，别和今天的别人比&lt;/li&gt;
+  &lt;li&gt;法则五 管教你家的小怪物：别让孩子做出令你讨厌他的事&lt;/li&gt;
+  &lt;li&gt;法则六 当痛苦到想诅咒一切：批判世界之前先清理你的房间&lt;/li&gt;
+  &lt;li&gt;法则七 苏格拉底的选择：追求意义，拒绝苟且&lt;/li&gt;
+  &lt;li&gt;法则八 不买醉鬼卖的东西：说真话，或者至少别撒谎&lt;/li&gt;
+  &lt;li&gt;法则九 别偷走来访者的问题：假设你聆听的人知道你不知道的事&lt;/li&gt;
+  &lt;li&gt;法则十 不要无视地毯下的龙：直面问题，言辞精确&lt;/li&gt;
+  &lt;li&gt;法则十一 不要打扰玩滑板的孩子们：承认现实，反对偏见&lt;/li&gt;
+  &lt;li&gt;法则十二 当你在街上遇到一只猫时，摸摸它：关注存在的善&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;批判世界之前先清理你的房间。我觉得这是整本书的基调，在你没有负起对自己人生的责任时，不要过多关注世界的纷扰，而是先整理好自己，让自己变得更有责任感。是的，责任感。现在大家好像在个人生活中不怎么提到这个词了，因为它有点沉重和落于时代，但我觉得还是很重要。就像书中写的，你要成为你父亲葬礼上最值得依靠的人，为你的家人负起责任来。当然有些事情只有经历过之后才会知道，特别是过生活，你想的特别美好的时候，更多是纸上谈兵，我想表明的是这当然不假，这和12条法则并不冲突，甚至这12条法则可以作为你生活工作的指导思想之一。但是你需要提前知道这些信息，提前在你的内心和脑海中种下一颗坚韧的种子，然后把每一次的经历都作为其成长的肥料。罗曼罗兰说过一句话，“生活中只有一种正真的英雄主义，就是认清生活的真相之后依然热爱它”。所以请不要害怕生活中遇到的挫折、困难，明确你自己的人生指导法则，这12条法则只是皮得森教授自己作为临床心理学家的总结，我们可以作为参考，还是需要记录适合自己的人生法则。但是，对我自己来说，责任、坚韧、诚实和追求意义这些存在了很久的人生品质，毫无疑问会作为我人生法则之书的坚实基础。&lt;/p&gt;
+
+&lt;p&gt;我还特别想要指出一点的是，这12条法则多数是要求你从自身做起，和昨天的自己比，别和今天的别人比。和别人比较是造成你生活痛苦的重要原因之一，因为这样有了期待、有了嫉妒，你大脑中的多巴胺欲望回路被持续刺激，只想要更多，这样在原本就是痛苦的人生基础上更加的痛苦。还有，这些法则永远要通过你自身的理解，融入到你的生活工作中，用来指导你的人生，千万不要作为你卖弄的资本，想要强加在别人身上，遇到生活过的艰难的人，多给他们报有一点善意吧，不要说那些过得不好是自身不努力的屁话，你的这些诅咒最终都会被你自己反噬。这个世界包含的比你关注的多太多了，你必须认真分配有限的资源。&lt;/p&gt;
+
+&lt;p&gt;苏格拉底的选择：追求意义，拒绝苟且。&lt;/p&gt;
+
+&lt;p&gt;我的选择：承担责任，追求价值，寻找意义。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;相关链接&lt;/strong&gt;&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;&lt;a href=&quot;https://www.youtube.com/@JordanBPeterson&quot;&gt;乔丹•皮得森教授的YouTube主页&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://book.douban.com/subject/34870933/&quot;&gt;豆瓣：人生十二法则&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;&lt;a href=&quot;https://www.zhihu.com/zvideo/1543581948072660992&quot;&gt;乔丹•皮得森教授分享片段：要敢于表达自我并证明自己&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content><author><name>Wanjin Hu (胡万金)</name></author><category term="人生意义" /><summary type="html">真的有12条法则可以来指导你过的人生么？我开始思考自己的人生。</summary></entry><entry><title type="html">宏基因组分析流程</title><link href="http://localhost:4000/2023/08/10/pipeline-metagenomic-analysis/" rel="alternate" type="text/html" title="宏基因组分析流程" /><published>2023-08-10T00:00:00+08:00</published><updated>2023-08-10T00:00:00+08:00</updated><id>http://localhost:4000/2023/08/10/pipeline-metagenomic-analysis</id><content type="html" xml:base="http://localhost:4000/2023/08/10/pipeline-metagenomic-analysis/">&lt;p&gt;提供一个宏基因组分析流程。&lt;/p&gt;
+
+&lt;p&gt;Here is a metagenomic sequence data analysis pipeline, nothing different with other pipelines. But if you want to get to know the metagenomic analysis pipeline step by step, maybe you can get some details from this repository. And it is suitable for the beginners i think.&lt;/p&gt;
+
+&lt;p&gt;Scripts and test files you can find here: &lt;a href=&quot;https://github.com/wanjinhu/Metagenomic-Analysis-Pipeline&quot;&gt;Metagenomic-Analysis-Pipeline&lt;/a&gt;&lt;/p&gt;
+
+&lt;h2 id=&quot;pipeline-overview-&quot;&gt;Pipeline overview 🐫&lt;/h2&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;Raw sequence quality trim&lt;/li&gt;
+  &lt;li&gt;Host reference sequence remove&lt;/li&gt;
+  &lt;li&gt;Metaphlan for composition of microbial communities&lt;/li&gt;
+  &lt;li&gt;Sequence assembly&lt;/li&gt;
+  &lt;li&gt;Gene prediction&lt;/li&gt;
+  &lt;li&gt;Remove redundancy gene and build non-redundant geneset&lt;/li&gt;
+  &lt;li&gt;Function annotation using emapper&lt;/li&gt;
+  &lt;li&gt;Organize function results table&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h2 id=&quot;quick-start-&quot;&gt;Quick start 🦏&lt;/h2&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nv&quot;&gt;$python&lt;/span&gt; pipe_metagenome.py &lt;span class=&quot;nt&quot;&gt;-h&lt;/span&gt;
+usage: 
+&lt;span class=&quot;o&quot;&gt;=================================================================&lt;/span&gt;
+python pipe_metagenome.py
+  &lt;span class=&quot;nt&quot;&gt;--fastq_list&lt;/span&gt; fq.list
+  &lt;span class=&quot;nt&quot;&gt;--output_dir&lt;/span&gt; result
+  &lt;span class=&quot;nt&quot;&gt;--ref&lt;/span&gt; ref_bowtie2_index
+ref_bowtie2_index:
+canis: /root/database/Canis_GCF_000002285.5/Canis_GCF_000002285_5
+human: /root/database/hg38_GCF_000001405.40/GCF_000001405.40/hg38
+&lt;span class=&quot;o&quot;&gt;=================================================================&lt;/span&gt;
+
+Pipeline of metagenome
+
+optional arguments:
+  &lt;span class=&quot;nt&quot;&gt;-h&lt;/span&gt;, &lt;span class=&quot;nt&quot;&gt;--help&lt;/span&gt;            show this &lt;span class=&quot;nb&quot;&gt;help &lt;/span&gt;message and &lt;span class=&quot;nb&quot;&gt;exit&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;-l&lt;/span&gt; FQLIST, &lt;span class=&quot;nt&quot;&gt;--fastq_list&lt;/span&gt; FQLIST
+                        raw fq list
+  &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; OUTDIR, &lt;span class=&quot;nt&quot;&gt;--output_dir&lt;/span&gt; OUTDIR
+                        result output
+  &lt;span class=&quot;nt&quot;&gt;-r&lt;/span&gt; REF, &lt;span class=&quot;nt&quot;&gt;--ref&lt;/span&gt; REF     ref genome bowtie2 index
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;What you need to do is to provide two input files:&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;–fastq_list # sample - fq_R1 - fq_R2 list, format like &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;fq.list&lt;/code&gt;&lt;/li&gt;
+  &lt;li&gt;–ref # host reference genome bowtie2 index&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;And set output dir &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;--output_dir&lt;/code&gt;, all of output results would be included.&lt;/p&gt;
+
+&lt;h2 id=&quot;output-files-explanation-&quot;&gt;Output files explanation 🐊&lt;/h2&gt;
+
+&lt;h3 id=&quot;output-files-tree-not-show-all-files&quot;&gt;Output files tree (not show all files)&lt;/h3&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;├── 00-result                           &lt;span class=&quot;c&quot;&gt;# most important results in this fold&lt;/span&gt;
+│   ├── 00_merged_abundance_table.txt   &lt;span class=&quot;c&quot;&gt;# composition of microbial communities&lt;/span&gt;
+│   ├── 01_metaphlan_phylum.txt         &lt;span class=&quot;c&quot;&gt;# communities in phylum level&lt;/span&gt;
+│   ├── 02_metaphlan_class.txt          &lt;span class=&quot;c&quot;&gt;# communities in class level&lt;/span&gt;
+│   ├── 03_metaphlan_order.txt          &lt;span class=&quot;c&quot;&gt;# communities in order level&lt;/span&gt;
+│   ├── 04_metaphlan_family.txt         &lt;span class=&quot;c&quot;&gt;# communities in family level&lt;/span&gt;
+│   ├── 05_metaphlan_genus.txt          &lt;span class=&quot;c&quot;&gt;# communities in genus level&lt;/span&gt;
+│   ├── 06_metaphlan_species.txt        &lt;span class=&quot;c&quot;&gt;# communities in species level&lt;/span&gt;
+│   ├── KO_samples.xls                  &lt;span class=&quot;c&quot;&gt;# KEGG KO gene composition table&lt;/span&gt;
+│   └── pathway_samples.xls             &lt;span class=&quot;c&quot;&gt;# KEGG pathway composition table&lt;/span&gt;
+├── 01-fastp_trim
+├── 02-ref_remove
+├── 03-metaphlan
+├── 04-megahit
+├── 05-prodigal
+├── 06-cdhit
+├── 07-emapper
+├── 08-sam_count
+├── 09-emapper_kegg
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;output-important-result-files-explanation&quot;&gt;Output important result files explanation&lt;/h3&gt;
+
+&lt;h4 id=&quot;metaphlan_diff-levelstxt&quot;&gt;metaphlan_diff-levels.txt&lt;/h4&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;column 1 : communities information&lt;/li&gt;
+  &lt;li&gt;column 2 ~ : communities abundance percent of samples&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;clade_name  C1
+k__Bacteria&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;p__Firmicutes 86.51132
+k__Bacteria&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;p__Actinobacteria 6.52203
+k__Bacteria&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;p__Bacteroidetes  4.24729
+k__Bacteria&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;p__Proteobacteria 1.96422
+k__Bacteria&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;p__Fusobacteria 0.75514
+k__Bacteria&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;p__Tenericutes  0.0
+k__Bacteria&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;p__Spirochaetes 0.0
+k__Bacteria&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;p__Verrucomicrobia  0.0
+...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h4 id=&quot;ko_samplesxls&quot;&gt;KO_samples.xls&lt;/h4&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;column 1 : KO gene name&lt;/li&gt;
+  &lt;li&gt;column 2 : KO gene description&lt;/li&gt;
+  &lt;li&gt;column 3 : KO gene id&lt;/li&gt;
+  &lt;li&gt;column 4 ~ : KO gene number of samples&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;KO_name	KO_des	KO	C1
+&lt;span class=&quot;s2&quot;&gt;&quot;E1.1.1.1, adh&quot;&lt;/span&gt;	alcohol dehydrogenase &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;EC:1.1.1.1]	K00001	2817.0
+&lt;span class=&quot;s2&quot;&gt;&quot;AKR1A1, adh&quot;&lt;/span&gt;	alcohol dehydrogenase &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;NADP+&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;EC:1.1.1.2]	K00002	254.0
+hom	homoserine dehydrogenase &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;EC:1.1.1.3]	K00003	2890.0
+&lt;span class=&quot;s2&quot;&gt;&quot;BDH, butB&quot;&lt;/span&gt;	&lt;span class=&quot;s2&quot;&gt;&quot;(R,R)-butanediol dehydrogenase / meso-butanediol dehydrogenase / diacetyl reductase [EC:1.1.1.4 1.1.1.- 1.1.1.303]&quot;&lt;/span&gt;	K00004	20.0
+...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h4 id=&quot;pathway_samplesxls&quot;&gt;pathway_samples.xls&lt;/h4&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;column 1 : pathway level 1&lt;/li&gt;
+  &lt;li&gt;column 2 : pathway level 2&lt;/li&gt;
+  &lt;li&gt;column 3 : pathway level 3&lt;/li&gt;
+  &lt;li&gt;column 4 : pathway id&lt;/li&gt;
+  &lt;li&gt;column 5 ~ : pathway gene number of samples&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;level1	level2	level3	pathway	C1
+Metabolism	Carbohydrate metabolism	Glycolysis / Gluconeogenesis	ko00010	91005.0
+Metabolism	Carbohydrate metabolism	Citrate cycle &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;TCA cycle&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;	ko00020	31442.0
+Metabolism	Carbohydrate metabolism	Pentose phosphate pathway	ko00030	53905.0
+Metabolism	Carbohydrate metabolism	Pentose and glucuronate interconversions	ko00040	21334.0
+...
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;step-by-step-&quot;&gt;Step by step 🦥&lt;/h2&gt;
+
+&lt;h3 id=&quot;step1-raw-sequence-quality-trim-using-fastp&quot;&gt;Step1 Raw sequence quality trim using fastp&lt;/h3&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;fastp &lt;span class=&quot;nt&quot;&gt;-i&lt;/span&gt; sample_1.fastq.gz &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+      &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; sample_clean.1.fastq.gz &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+      &lt;span class=&quot;nt&quot;&gt;-I&lt;/span&gt; sample_2.fastq.gz &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+      &lt;span class=&quot;nt&quot;&gt;-O&lt;/span&gt; sample_clean.2.fastq.gz &lt;span class=&quot;se&quot;&gt;\&lt;/span&gt;
+      &lt;span class=&quot;nt&quot;&gt;-w&lt;/span&gt; 8 &lt;span class=&quot;nt&quot;&gt;-h&lt;/span&gt; sample.html &lt;span class=&quot;nt&quot;&gt;-j&lt;/span&gt; sample.json
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;step2-host-reference-sequence-remove&quot;&gt;Step2 Host reference sequence remove&lt;/h3&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;bowtie2 &lt;span class=&quot;nt&quot;&gt;-x&lt;/span&gt; ref_bowtie2_index &lt;span class=&quot;nt&quot;&gt;-1&lt;/span&gt; sample_clean.1.fastq.gz &lt;span class=&quot;nt&quot;&gt;-2&lt;/span&gt; sample_clean.2.fastq.gz &lt;span class=&quot;nt&quot;&gt;-S&lt;/span&gt; sample.sam  2&amp;gt;sample.mapping.log
+samtools fastq -@ 8 &lt;span class=&quot;nt&quot;&gt;-f&lt;/span&gt; 4 sample.sam &lt;span class=&quot;nt&quot;&gt;-1&lt;/span&gt; sample.unmap.1.fastq.gz &lt;span class=&quot;nt&quot;&gt;-2&lt;/span&gt; sample.unmap.2.fastq.gz &lt;span class=&quot;nt&quot;&gt;-s&lt;/span&gt; sample.unmap.single.fastq.gz
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;step3-metaphlan-for-composition-of-microbial-communities&quot;&gt;Step3 Metaphlan for composition of microbial communities&lt;/h3&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;zcat sample.unmap.1.fastq.gz sample.unmap.2.fastq.gz|metaphlan &lt;span class=&quot;nt&quot;&gt;--input_type&lt;/span&gt; fastq &lt;span class=&quot;nt&quot;&gt;--bowtie2out&lt;/span&gt; sample_bowtie2.bz2 &lt;span class=&quot;nt&quot;&gt;--output_file&lt;/span&gt; sample_metaphlan.tsv &lt;span class=&quot;nt&quot;&gt;--nproc&lt;/span&gt; 8
+&lt;span class=&quot;c&quot;&gt;# when you install metaphlan in the system, you will get script &apos;merge_metaphlan_tables.py&apos;, that&apos;s for merge different samples metaphlan result in one file, like: &lt;/span&gt;
+merge_metaphlan_tables.py &lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.tsv &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; 00_merged_abundance_table.txt
+&lt;span class=&quot;nb&quot;&gt;grep&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-E&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;(p__)|(clade_name)&apos;&lt;/span&gt; 00_merged_abundance_table.txt |grep &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;c__&apos;&lt;/span&gt;|sed &lt;span class=&quot;s1&quot;&gt;&apos;s/|/;/g&apos;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; 01_metaphlan_phylum.txt
+&lt;span class=&quot;nb&quot;&gt;grep&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-E&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;(c__)|(clade_name)&apos;&lt;/span&gt; 00_merged_abundance_table.txt |grep &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;o__&apos;&lt;/span&gt;|sed &lt;span class=&quot;s1&quot;&gt;&apos;s/|/;/g&apos;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; 02_metaphlan_class.txt
+&lt;span class=&quot;nb&quot;&gt;grep&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-E&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;(o__)|(clade_name)&apos;&lt;/span&gt; 00_merged_abundance_table.txt |grep &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;f__&apos;&lt;/span&gt;|sed &lt;span class=&quot;s1&quot;&gt;&apos;s/|/;/g&apos;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; 03_metaphlan_order.txt
+&lt;span class=&quot;nb&quot;&gt;grep&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-E&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;(f__)|(clade_name)&apos;&lt;/span&gt; 00_merged_abundance_table.txt |grep &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;g__&apos;&lt;/span&gt;|sed &lt;span class=&quot;s1&quot;&gt;&apos;s/|/;/g&apos;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; 04_metaphlan_family.txt
+&lt;span class=&quot;nb&quot;&gt;grep&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-E&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;(g__)|(clade_name)&apos;&lt;/span&gt; 00_merged_abundance_table.txt |grep &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;s__&apos;&lt;/span&gt;|sed &lt;span class=&quot;s1&quot;&gt;&apos;s/|/;/g&apos;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; 05_metaphlan_genus.txt
+&lt;span class=&quot;nb&quot;&gt;grep&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-E&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;(s__)|(clade_name)&apos;&lt;/span&gt; 00_merged_abundance_table.txt |grep &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;t__&apos;&lt;/span&gt;|sed &lt;span class=&quot;s1&quot;&gt;&apos;s/|/;/g&apos;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; 06_metaphlan_species.txt
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;step4-sequence-assembly-and-trim-contigs-which-length--500bp&quot;&gt;Step4 Sequence assembly and trim contigs which length &amp;lt; 500bp&lt;/h3&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;megahit &lt;span class=&quot;nt&quot;&gt;-1&lt;/span&gt; sample.unmap.1.fastq.gz &lt;span class=&quot;nt&quot;&gt;-2&lt;/span&gt; sample.unmap.2.fastq.gz &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; sample_megahit &lt;span class=&quot;nt&quot;&gt;--out-prefix&lt;/span&gt; sample &lt;span class=&quot;nt&quot;&gt;-t&lt;/span&gt; 8
+seqkit &lt;span class=&quot;nb&quot;&gt;seq&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-m&lt;/span&gt; 500 sample_megahit/sample.contigs.fa &lt;span class=&quot;nt&quot;&gt;--remove-gaps&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; sample.contigs_500.fa
+&lt;span class=&quot;nb&quot;&gt;sed&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-i&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;s/&amp;gt;/&amp;gt;sample_/g&apos;&lt;/span&gt; sample.contigs_500.fa
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;step5-gene-prediction-using-prodigal&quot;&gt;Step5 Gene prediction using prodigal&lt;/h3&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;prodigal &lt;span class=&quot;nt&quot;&gt;-p&lt;/span&gt; meta &lt;span class=&quot;nt&quot;&gt;-a&lt;/span&gt; sample_prot.faa &lt;span class=&quot;nt&quot;&gt;-m&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-d&lt;/span&gt; sample_nucl.fna &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; sample_genes.gff &lt;span class=&quot;nt&quot;&gt;-f&lt;/span&gt; gff &lt;span class=&quot;nt&quot;&gt;-s&lt;/span&gt; sample.stat &lt;span class=&quot;nt&quot;&gt;-i&lt;/span&gt; sample.contigs_500.fa
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;step6-remove-redundancy-gene-and-build-non-redundant-geneset&quot;&gt;Step6 Remove redundancy gene and build non-redundant geneset&lt;/h3&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nb&quot;&gt;cat &lt;/span&gt;sample1_prot.faa sample2_prot.faa ... &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt;  prot.faa
+&lt;span class=&quot;nb&quot;&gt;cat &lt;/span&gt;sample1_nucl.fna sample2_nucl.fna ... &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt;  nucl.fna
+cd-hit &lt;span class=&quot;nt&quot;&gt;-i&lt;/span&gt; prot.faa &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; prot_nonerude.faa &lt;span class=&quot;nt&quot;&gt;-c&lt;/span&gt; 0.95 &lt;span class=&quot;nt&quot;&gt;-T&lt;/span&gt; 8 &lt;span class=&quot;nt&quot;&gt;-n&lt;/span&gt; 5 &lt;span class=&quot;nt&quot;&gt;-d&lt;/span&gt; 0 &lt;span class=&quot;nt&quot;&gt;-aS&lt;/span&gt; 0.9 &lt;span class=&quot;nt&quot;&gt;-g&lt;/span&gt; 1 &lt;span class=&quot;nt&quot;&gt;-sc&lt;/span&gt; 1 &lt;span class=&quot;nt&quot;&gt;-sf&lt;/span&gt; 1 &lt;span class=&quot;nt&quot;&gt;-M&lt;/span&gt; 0
+&lt;span class=&quot;nb&quot;&gt;grep&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;&amp;gt;&apos;&lt;/span&gt; prot_nonerude.faa|awk &lt;span class=&quot;nt&quot;&gt;-F&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos; &apos;&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;{print $1}&apos;&lt;/span&gt;|sed &lt;span class=&quot;s1&quot;&gt;&apos;s/&amp;gt;//g&apos;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; prot_nonerude.list
+seqtk subseq nucl.fna prot_nonerude.list &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; nucl_nonerude.fna
+bwa index nucl_nonerude.fna &lt;span class=&quot;nt&quot;&gt;-p&lt;/span&gt; geneset_bwa
+bioawk &lt;span class=&quot;nt&quot;&gt;-c&lt;/span&gt; fastx &lt;span class=&quot;s1&quot;&gt;&apos;{print $name, length($seq)}&apos;&lt;/span&gt; nucl_nonerude.fna &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; geneset_length.txt
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;step7-function-annotation-using-emapper&quot;&gt;Step7 Function annotation using emapper&lt;/h3&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;# when you install emapper in the system, you will get script &apos;emapper.py&apos;&lt;/span&gt;
+emapper.py &lt;span class=&quot;nt&quot;&gt;-i&lt;/span&gt; prot_nonerude.faa &lt;span class=&quot;nt&quot;&gt;-o&lt;/span&gt; eggnog &lt;span class=&quot;nt&quot;&gt;--cpu&lt;/span&gt; 0 &lt;span class=&quot;nt&quot;&gt;--usemem&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;cut&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-f1&lt;/span&gt;,12 eggnog.emapper.annotations|grep &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;^#&quot;&lt;/span&gt;|sed &lt;span class=&quot;s1&quot;&gt;&apos;s/ko://g&apos;&lt;/span&gt;|sed &lt;span class=&quot;s1&quot;&gt;&apos;1i gene\tko&apos;&lt;/span&gt;|grep &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;-&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; KEGG_KO.txt
+&lt;span class=&quot;nb&quot;&gt;cut&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-f1&lt;/span&gt;,13 eggnog.emapper.annotations|grep &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;^#&quot;&lt;/span&gt;|sed &lt;span class=&quot;s1&quot;&gt;&apos;1i gene\tpathway&apos;&lt;/span&gt;|grep &lt;span class=&quot;nt&quot;&gt;-v&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;-&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; KEGG_PATHWAY.txt
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;step8-gene-num-count&quot;&gt;Step8 Gene num count&lt;/h3&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;bwa mem &lt;span class=&quot;nt&quot;&gt;-t&lt;/span&gt; 4 geneset_bwa sample.unmap.1.fastq.gz sample.unmap.2.fastq.gz | samtools view &lt;span class=&quot;nt&quot;&gt;-bS&lt;/span&gt; - | samtools &lt;span class=&quot;nb&quot;&gt;sort&lt;/span&gt; - &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; sample_mapping_geneset.bam
+samtools view &lt;span class=&quot;nt&quot;&gt;-F&lt;/span&gt; 4 &lt;span class=&quot;nt&quot;&gt;-F&lt;/span&gt; 256 &lt;span class=&quot;nt&quot;&gt;-F&lt;/span&gt; 2048 sample_mapping_geneset.bam|awk &lt;span class=&quot;s1&quot;&gt;&apos;{if($3!=&quot;*&quot;) print $3}&apos;&lt;/span&gt;|sort| &lt;span class=&quot;nb&quot;&gt;uniq&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-c&lt;/span&gt;|awk &lt;span class=&quot;s1&quot;&gt;&apos;BEGIN {FS=&quot; &quot;;OFS=&quot;,&quot;} {print $2,$1}&apos;&lt;/span&gt; | &lt;span class=&quot;nb&quot;&gt;awk&lt;/span&gt; &lt;span class=&quot;s1&quot;&gt;&apos;BEGIN {FS=&quot;,&quot;;OFS=&quot;,&quot;} {if ($2 &amp;gt; 1) print $1&quot;\t&quot;$2; else print $1&quot;\t0&quot;}&apos;&lt;/span&gt;|sed &lt;span class=&quot;s1&quot;&gt;&apos;1i gene\tsample&apos;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; sample.count
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;step9-organize-function-results-table&quot;&gt;Step9 Organize function results table&lt;/h3&gt;
+
+&lt;div class=&quot;language-shell highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;c&quot;&gt;# using /kegg/kegg.py to analysis, like:&lt;/span&gt;
+&lt;span class=&quot;nv&quot;&gt;$python&lt;/span&gt; kegg.py &lt;span class=&quot;nt&quot;&gt;-h&lt;/span&gt;
+usage: python kegg.py &lt;span class=&quot;nt&quot;&gt;-kk&lt;/span&gt; KEGG_KO.txt &lt;span class=&quot;nt&quot;&gt;-kp&lt;/span&gt; KEGG_PATHWAY.txt &lt;span class=&quot;nt&quot;&gt;-mt&lt;/span&gt; merged_file.txt &lt;span class=&quot;nt&quot;&gt;-ok&lt;/span&gt; out_KO.xls &lt;span class=&quot;nt&quot;&gt;-op&lt;/span&gt; out_pathway.xls
+
+Merge KO/pathway count table from eggnog result.
+
+optional arguments:
+  &lt;span class=&quot;nt&quot;&gt;-h&lt;/span&gt;, &lt;span class=&quot;nt&quot;&gt;--help&lt;/span&gt;            show this &lt;span class=&quot;nb&quot;&gt;help &lt;/span&gt;message and &lt;span class=&quot;nb&quot;&gt;exit&lt;/span&gt;
+  &lt;span class=&quot;nt&quot;&gt;-kk&lt;/span&gt; KEGGKO, &lt;span class=&quot;nt&quot;&gt;--kegg_KO&lt;/span&gt; KEGGKO
+                        Sample&lt;span class=&quot;s1&quot;&gt;&apos;s kegg KO information, such as KEGG_KO.txt
+  -kp KEGGPATHWAY, --kegg_pathway KEGGPATHWAY
+                        Sample&apos;&lt;/span&gt;s kegg pathway information, such as
+                        KEGG_PATHWAY.txt
+  &lt;span class=&quot;nt&quot;&gt;-mt&lt;/span&gt; MERGETABLE, &lt;span class=&quot;nt&quot;&gt;--merge_table&lt;/span&gt; MERGETABLE
+                        Sample&lt;span class=&quot;s1&quot;&gt;&apos;s merged gene count table, such as
+                        merged_file.txt
+  -ok OUTKO, --out_KO OUTKO
+                        Output KO result, such as out_KO.xls
+  -op OUTPATHWAY, --out_pathway OUTPATHWAY
+                        Output pathway result, such as out_pathway.xls
+  -t TMP, --tmp TMP     Tmp files dir
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h2 id=&quot;contact-&quot;&gt;Contact 🐖&lt;/h2&gt;
+
+&lt;p&gt;Wanjin Hu (wanjin.hu@outlook.com)&lt;/p&gt;</content><author><name>Wanjin Hu (胡万金)</name></author><category term="测序数据分析" /><summary type="html">提供一个宏基因组分析流程。</summary></entry></feed>
