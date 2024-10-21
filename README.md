@@ -10,6 +10,7 @@
 4. [QIIME2 构建数据库以及常规分析流程](https://wanjinhu.github.io/2023/10/27/pipeline-qiime2-analysis/)
 5. [阿里云服务器 mysql 数据库为什么用 DBeaver 等软件远程连接不上？](https://wanjinhu.github.io/2024/01/11/issue-aliyun-mysql/)
 6. [【数据分析】一套适合初学者的宏基因组数据分析过程的讲解](https://wanjinhu.github.io/2024/02/18/article-metagenomic/)
+7. [【数据分析】原核生物基因组的一般分析思路梳理](https://wanjinhu.github.io/2024/10/21/article-bacterial-genome/)
 
 ## wiki (常用命令)
 
